@@ -67,6 +67,12 @@ export default function Home() {
   };
 
   const deletePasteFromHistory = (indexToDelete: number) => {
+    const confirmDelete = window.confirm(
+      "¿Seguro que quieres borrar este paste del historial?"
+    );
+
+    if (!confirmDelete) return;
+
     const updated = misPastes.filter(
       (_, index) => index !== indexToDelete
     );
