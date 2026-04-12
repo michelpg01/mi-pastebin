@@ -17,10 +17,12 @@ export default async function PastePage({
     notFound();
   }
 
+  const lines = paste.content.split("\n");
+
   return (
     <main className="min-h-screen bg-black text-white px-6 py-10">
-      <div className="max-w-5xl mx-auto">
-        {/* BOTÓN VOLVER */}
+      <div className="max-w-6xl mx-auto">
+        {/* TOP */}
         <div className="mb-6 flex items-center justify-between">
           <Link
             href="/"
@@ -47,16 +49,43 @@ export default async function PastePage({
           </div>
         </div>
 
-        {/* TÍTULO */}
-        <h1 className="text-4xl font-bold text-blue-500 mb-8">
-          {paste.title || `Paste: ${paste.slug}`}
-        </h1>
+        {/* TÍTULO + CONTADOR */}
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-5xl font-bold text-blue-500">
+            {paste.title || `Paste: ${paste.slug}`}
+          </h1>
 
-        {/* CONTENIDO */}
-        <div className="bg-zinc-900 border border-zinc-700 rounded-3xl p-8 shadow-lg">
-          <pre className="whitespace-pre-wrap text-lg leading-8 text-white">
-            {paste.content}
-          </pre>
+          <div className="bg-zinc-900 border border-zinc-700 px-5 py-3 rounded-2xl text-zinc-300 font-semibold">
+            {lines.length} líneas
+          </div>
+        </div>
+
+        {/* EDITOR ESTILO VSCODE */}
+        <div className="bg-zinc-900 border border-zinc-700 rounded-3xl shadow-lg overflow-hidden">
+          <div className="flex bg-zinc-950 border-b border-zinc-700 px-6 py-3 text-sm text-zinc-400">
+            <span className="font-semibold">
+              {paste.title || paste.slug}
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <div className="min-w-full">
+              {lines.map((line, index) => (
+                <div
+                  key={index}
+                  className="flex hover:bg-zinc-800/40 transition"
+                >
+                  <div className="w-20 shrink-0 text-right px-4 py-1 text-zinc-500 select-none border-r border-zinc-800">
+                    {index + 1}
+                  </div>
+
+                  <pre className="flex-1 px-6 py-1 whitespace-pre-wrap text-lg leading-9 text-white">
+                    {line || " "}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </main>
