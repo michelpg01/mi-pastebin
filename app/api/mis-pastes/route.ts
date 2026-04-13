@@ -8,7 +8,10 @@ export async function GET() {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
-      return NextResponse.json([]);
+      return NextResponse.json({
+        activos: [],
+        papelera: [],
+      });
     }
 
     const user = await prisma.user.findUnique({
@@ -18,10 +21,13 @@ export async function GET() {
     });
 
     if (!user) {
-      return NextResponse.json([]);
+      return NextResponse.json({
+        activos: [],
+        papelera: [],
+      });
     }
 
-    const pastes = await prisma.paste.findMany({
+    const activos = await prisma.paste.findMany({
       where: {
         userId: user.id,
         deletedAt: null,
@@ -31,9 +37,28 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(pastes);
+    const papelera = await prisma.paste.findMany({
+      where: {
+        userId: user.id,
+        deletedAt: {
+          not: null,
+        },
+      },
+      orderBy: {
+        deletedAt: "desc",
+      },
+    });
+
+    return NextResponse.json({
+      activos,
+      papelera,
+    });
   } catch (error) {
     console.error(error);
-    return NextResponse.json([]);
+
+    return NextResponse.json({
+      activos: [],
+      papelera: [],
+    });
   }
 }

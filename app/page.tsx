@@ -12,6 +12,8 @@ export default function Home() {
   const [expires, setExpires] = useState("10m");
   const [visibility, setVisibility] = useState("public");
   const [misPastes, setMisPastes] = useState<any[]>([]);
+  const [papelera, setPapelera] = useState<any[]>([]);
+  const [tab, setTab] = useState("activos");
   const [creating, setCreating] = useState(false);
 
   const router = useRouter();
@@ -19,6 +21,7 @@ export default function Home() {
   const cargarPastes = async () => {
     if (!session) {
       setMisPastes([]);
+      setPapelera([]);
       return;
     }
 
@@ -27,11 +30,18 @@ export default function Home() {
       const data = await res.json();
 
       setMisPastes(
-        data.map((paste: any) => ({
+        data.activos.map((paste: any) => ({
           title: paste.title || "Sin título",
           url: `/${paste.slug}`,
           slug: paste.slug,
           visibility: paste.visibility,
+        }))
+      );
+
+      setPapelera(
+        data.papelera.map((paste: any) => ({
+          title: paste.title || "Sin título",
+          slug: paste.slug,
         }))
       );
     } catch (error) {
@@ -71,33 +81,36 @@ export default function Home() {
   };
 
   const deletePaste = async (slug: string) => {
-    const confirmDelete = confirm(
+    const ok = confirm(
       "¿Seguro que quieres mover este paste a la papelera?"
     );
 
-    if (!confirmDelete) return;
+    if (!ok) return;
 
-    try {
-      const res = await fetch(`/api/paste/${slug}`, {
-        method: "DELETE",
-      });
+    await fetch(`/api/paste/${slug}`, {
+      method: "DELETE",
+    });
 
-      if (!res.ok) {
-        alert("No se pudo borrar");
-        return;
-      }
+    await cargarPastes();
+  };
 
-      await cargarPastes();
-    } catch (error) {
-      console.error(error);
-      alert("Error al borrar");
-    }
+  const restorePaste = async (slug: string) => {
+    await fetch(`/api/paste/${slug}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        restore: true,
+      }),
+    });
+
+    await cargarPastes();
   };
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white px-4 sm:px-6 py-8">
       <div className="max-w-[1700px] mx-auto">
-        {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between gap-4 mb-8">
           <h1 className="text-4xl sm:text-5xl font-bold text-blue-500">
             Mi Pastebin
@@ -106,15 +119,13 @@ export default function Home() {
           {!session ? (
             <button
               onClick={() => signIn("google")}
-              className="px-5 py-3 bg-white text-black rounded-xl font-semibold w-fit"
+              className="px-5 py-3 bg-white text-black rounded-xl font-semibold"
             >
               Iniciar con Google
             </button>
           ) : (
             <div className="flex items-center gap-4 flex-wrap">
-              <span className="text-zinc-300">
-                {session.user?.name}
-              </span>
+              <span>{session.user?.name}</span>
 
               <button
                 onClick={() => signOut()}
@@ -126,9 +137,8 @@ export default function Home() {
           )}
         </div>
 
-        {/* Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
-          {/* Editor */}
+          {/* editor */}
           <div className="space-y-6">
             <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-4 flex flex-col xl:flex-row gap-4 xl:items-center xl:justify-between sticky top-4 z-20">
               <div className="flex flex-wrap gap-3">
@@ -141,7 +151,6 @@ export default function Home() {
                   <option value="1h">1 hora</option>
                   <option value="1d">1 día</option>
                   <option value="7d">7 días</option>
-
                   {session && (
                     <option value="never">
                       Nunca
@@ -159,11 +168,9 @@ export default function Home() {
                   <option value="public">
                     Público
                   </option>
-
                   <option value="unlisted">
-                    Oculto (link funciona)
+                    Oculto
                   </option>
-
                   {session && (
                     <option value="private">
                       Privado
@@ -175,7 +182,7 @@ export default function Home() {
               <button
                 onClick={createPaste}
                 disabled={creating}
-                className="px-6 py-3 bg-blue-600 rounded-xl hover:bg-blue-500 transition font-semibold disabled:opacity-50"
+                className="px-6 py-3 bg-blue-600 rounded-xl"
               >
                 {creating
                   ? "Creando..."
@@ -184,57 +191,76 @@ export default function Home() {
             </div>
 
             <input
-              type="text"
-              placeholder="Título del paste"
               value={title}
               onChange={(e) =>
                 setTitle(e.target.value)
               }
+              placeholder="Título del paste"
               className="w-full p-4 rounded-2xl bg-zinc-900 border border-zinc-700"
             />
 
             <textarea
-              className="w-full h-[65vh] lg:h-[75vh] p-4 rounded-2xl bg-zinc-900 border border-zinc-700 font-mono"
               value={content}
               onChange={(e) =>
                 setContent(e.target.value)
               }
               placeholder="Escribe aquí..."
+              className="w-full h-[70vh] p-4 rounded-2xl bg-zinc-900 border border-zinc-700 font-mono"
             />
           </div>
 
-          {/* Mis pastes */}
+          {/* panel */}
           {session && (
             <div className="bg-zinc-900 rounded-2xl border border-zinc-700 p-6 h-fit lg:sticky lg:top-4">
-              <h2 className="text-2xl font-bold text-blue-400 mb-6">
-                Mis pastes
-              </h2>
+              <div className="flex gap-2 mb-6">
+                <button
+                  onClick={() =>
+                    setTab("activos")
+                  }
+                  className={`px-4 py-2 rounded-xl ${
+                    tab === "activos"
+                      ? "bg-blue-600"
+                      : "bg-zinc-800"
+                  }`}
+                >
+                  Mis pastes
+                </button>
+
+                <button
+                  onClick={() =>
+                    setTab("papelera")
+                  }
+                  className={`px-4 py-2 rounded-xl ${
+                    tab === "papelera"
+                      ? "bg-red-600"
+                      : "bg-zinc-800"
+                  }`}
+                >
+                  Papelera ({papelera.length})
+                </button>
+              </div>
 
               <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-2">
-                {misPastes.length > 0 ? (
-                  misPastes.map((paste, index) => (
+                {tab === "activos" &&
+                  misPastes.map((paste, i) => (
                     <div
-                      key={index}
+                      key={i}
                       className="p-4 rounded-xl bg-zinc-800"
                     >
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">
-                          {paste.title}
-                        </span>
-
-                        <span className="text-xs px-2 py-1 rounded bg-zinc-700 text-zinc-300">
-                          {paste.visibility}
-                        </span>
+                      <div>
+                        {paste.title}
                       </div>
 
-                      <div className="text-sm text-zinc-400 mt-2 break-all">
+                      <div className="text-sm text-zinc-400 mt-2">
                         {paste.url}
                       </div>
 
-                      <div className="flex gap-2 mt-4 flex-wrap">
+                      <div className="flex gap-2 mt-4">
                         <button
                           onClick={() =>
-                            router.push(paste.url)
+                            router.push(
+                              paste.url
+                            )
                           }
                           className="px-3 py-2 bg-blue-600 rounded-lg text-sm"
                         >
@@ -254,7 +280,9 @@ export default function Home() {
 
                         <button
                           onClick={() =>
-                            deletePaste(paste.slug)
+                            deletePaste(
+                              paste.slug
+                            )
                           }
                           className="px-3 py-2 bg-red-600 rounded-lg text-sm"
                         >
@@ -262,12 +290,36 @@ export default function Home() {
                         </button>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-zinc-400">
-                    No tienes pastes todavía.
-                  </div>
-                )}
+                  ))}
+
+                {tab === "papelera" &&
+                  (papelera.length > 0 ? (
+                    papelera.map((paste, i) => (
+                      <div
+                        key={i}
+                        className="p-4 rounded-xl bg-zinc-800"
+                      >
+                        <div>
+                          {paste.title}
+                        </div>
+
+                        <button
+                          onClick={() =>
+                            restorePaste(
+                              paste.slug
+                            )
+                          }
+                          className="mt-4 px-3 py-2 bg-green-600 rounded-lg text-sm"
+                        >
+                          Restaurar
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-zinc-400">
+                      Papelera vacía.
+                    </div>
+                  ))}
               </div>
             </div>
           )}

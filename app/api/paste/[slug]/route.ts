@@ -74,7 +74,7 @@ export async function PUT(
       },
     });
 
-    if (!existingPaste || existingPaste.deletedAt) {
+    if (!existingPaste) {
       return NextResponse.json(
         { error: "Paste no encontrado" },
         { status: 404 }
@@ -88,8 +88,34 @@ export async function PUT(
       );
     }
 
-    const { title, content, visibility } =
-      await req.json();
+    const body = await req.json();
+
+    // Restaurar desde papelera
+    if (body.restore) {
+      const paste = await prisma.paste.update({
+        where: {
+          slug,
+        },
+        data: {
+          deletedAt: null,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        url: `/${paste.slug}`,
+      });
+    }
+
+    // Bloquear editar si está borrado
+    if (existingPaste.deletedAt) {
+      return NextResponse.json(
+        { error: "Paste eliminado" },
+        { status: 404 }
+      );
+    }
+
+    const { title, content, visibility } = body;
 
     const paste = await prisma.paste.update({
       where: {
