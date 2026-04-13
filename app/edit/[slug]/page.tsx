@@ -197,7 +197,6 @@ export default function EditPastePage() {
         await navigator.clipboard.writeText(
           content
         );
-
         alert(
           "Contenido copiado"
         );
@@ -263,25 +262,60 @@ export default function EditPastePage() {
             )
               return;
 
-            const title =
+            const fullTitle =
               match[1];
+
+            let seriesName =
+              fullTitle;
+            let seasonLabel =
+              "General";
+
+            const seasonMatch =
+              fullTitle.match(
+                /(.*?)\s*-\s*(Temporada\s*\d+)/i
+              );
+
+            if (
+              seasonMatch
+            ) {
+              seriesName =
+                seasonMatch[1].trim();
+              seasonLabel =
+                seasonMatch[2].trim();
+            }
 
             if (
               !map[
-                title
+                seriesName
               ]
             ) {
               map[
-                title
-              ] = [
-                {
-                  seasonLabel:
-                    title,
-                  line:
-                    index +
-                    1,
-                },
-              ];
+                seriesName
+              ] = [];
+            }
+
+            const exists =
+              map[
+                seriesName
+              ].some(
+                (
+                  item
+                ) =>
+                  item.seasonLabel ===
+                  seasonLabel
+              );
+
+            if (
+              !exists
+            ) {
+              map[
+                seriesName
+              ].push({
+                seasonLabel,
+                line:
+                  index +
+                  1,
+              });
             }
           }
         );
@@ -300,7 +334,6 @@ export default function EditPastePage() {
   return (
     <main className="h-screen theme-bg px-3 sm:px-5 lg:px-6 py-3 overflow-hidden">
       <div className="w-full max-w-[1900px] mx-auto h-full flex flex-col gap-3">
-        {/* Header */}
         <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 shrink-0">
           <h1 className="text-3xl sm:text-4xl font-bold text-yellow-500">
             Editar Paste
@@ -388,7 +421,7 @@ export default function EditPastePage() {
         />
 
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4 flex-1 min-h-0">
-          {/* Editor */}
+          {/* editor */}
           <div className="theme-card rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-0">
             <div className="px-6 py-3 text-sm opacity-70 font-semibold shrink-0 border-b border-black/10 dark:border-white/10">
               {title || slug}
@@ -404,87 +437,6 @@ export default function EditPastePage() {
                 value={
                   content
                 }
-                beforeMount={(
-                  monaco
-                ) => {
-                  monaco.languages.register(
-                    {
-                      id: "m3u",
-                    }
-                  );
-
-                  monaco.languages.setMonarchTokensProvider(
-                    "m3u",
-                    {
-                      tokenizer:
-                        {
-                          root: [
-                            [
-                              /^#EXTINF:.*/,
-                              "string",
-                            ],
-                            [
-                              /^https?:\/\/.*$/,
-                              "number",
-                            ],
-                          ],
-                        },
-                    }
-                  );
-
-                  monaco.editor.defineTheme(
-                    "vs-dark",
-                    {
-                      base: "vs-dark",
-                      inherit: true,
-                      rules: [
-                        {
-                          token:
-                            "string",
-                          foreground:
-                            "4ADE80",
-                        },
-                        {
-                          token:
-                            "number",
-                          foreground:
-                            "60A5FA",
-                        },
-                      ],
-                      colors:
-                        {},
-                    }
-                  );
-
-                  monaco.editor.defineTheme(
-                    "vs",
-                    {
-                      base: "vs",
-                      inherit: true,
-                      rules: [
-                        {
-                          token:
-                            "string",
-                          foreground:
-                            "16A34A",
-                        },
-                        {
-                          token:
-                            "number",
-                          foreground:
-                            "2563EB",
-                        },
-                      ],
-                      colors:
-                        {
-                          "editor.background":
-                            "#FFFFFF",
-                          "editor.foreground":
-                            "#111827",
-                        },
-                    }
-                  );
-                }}
                 onChange={(
                   value
                 ) => {
@@ -559,7 +511,7 @@ export default function EditPastePage() {
             </div>
           </div>
 
-          {/* Sidebar */}
+          {/* sidebar */}
           <aside className="theme-card rounded-3xl p-4 flex flex-col min-h-0">
             <h2 className="text-lg font-bold text-blue-500 mb-4 shrink-0">
               Índice M3U
@@ -570,35 +522,81 @@ export default function EditPastePage() {
                 groupedSeries
               ).map(
                 ([
-                  name,
-                  items,
+                  seriesName,
+                  seasons,
                 ]) => (
-                  <button
+                  <div
                     key={
-                      name
+                      seriesName
                     }
-                    onClick={() =>
-                      goToLine(
-                        items[0]
-                          .line
-                      )
-                    }
-                    className="
-                      w-full text-left px-4 py-4 rounded-2xl
-                      bg-zinc-100 dark:bg-zinc-800
-                      text-zinc-900 dark:text-white
-                      font-semibold
-                      shadow-sm
-                      hover:bg-zinc-200 dark:hover:bg-zinc-700
-                      hover:shadow-lg
-                      hover:scale-[1.02]
-                      active:scale-[0.98]
-                      transition-all duration-200
-                      cursor-pointer
-                    "
+                    className="rounded-2xl overflow-hidden"
                   >
-                    {name}
-                  </button>
+                    <button
+                      onClick={() =>
+                        setExpandedSeries(
+                          expandedSeries ===
+                            seriesName
+                            ? null
+                            : seriesName
+                        )
+                      }
+                      className="
+                        w-full text-left px-4 py-4 rounded-2xl
+                        bg-zinc-100 dark:bg-zinc-800
+                        text-zinc-900 dark:text-white
+                        font-semibold
+                        shadow-sm
+                        hover:bg-zinc-200 dark:hover:bg-zinc-700
+                        hover:shadow-lg
+                        hover:scale-[1.02]
+                        active:scale-[0.98]
+                        transition-all duration-200
+                        cursor-pointer
+                      "
+                    >
+                      {
+                        seriesName
+                      }
+                    </button>
+
+                    {expandedSeries ===
+                      seriesName && (
+                      <div className="mt-2 space-y-2 pl-2">
+                        {seasons.map(
+                          (
+                            season,
+                            index
+                          ) => (
+                            <button
+                              key={
+                                index
+                              }
+                              onClick={() =>
+                                goToLine(
+                                  season.line
+                                )
+                              }
+                              className="
+                                w-full text-left px-4 py-3 rounded-xl
+                                bg-zinc-200 dark:bg-zinc-700
+                                text-zinc-800 dark:text-zinc-100
+                                text-sm font-medium
+                                hover:bg-zinc-300 dark:hover:bg-zinc-600
+                                hover:translate-x-1
+                                active:scale-[0.98]
+                                transition-all duration-200
+                                cursor-pointer
+                              "
+                            >
+                              {
+                                season.seasonLabel
+                              }
+                            </button>
+                          )
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )
               )}
             </div>
