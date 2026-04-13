@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function GET(
   req: Request,
@@ -24,6 +26,7 @@ export async function GET(
     return NextResponse.json({
       title: paste.title,
       content: paste.content,
+      userId: paste.userId,
     });
   } catch (error) {
     console.error(error);
@@ -40,7 +43,50 @@ export async function PUT(
   context: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: "No autorizado" },
+        { status: 401 }
+      );
+    }
+
+    const user = await prisma.user.findUnique({
+      where: {
+        email: session.user.email,
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Usuario no encontrado" },
+        { status: 404 }
+      );
+    }
+
     const { slug } = await context.params;
+
+    const existingPaste = await prisma.paste.findUnique({
+      where: {
+        slug,
+      },
+    });
+
+    if (!existingPaste) {
+      return NextResponse.json(
+        { error: "Paste no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    if (existingPaste.userId !== user.id) {
+      return NextResponse.json(
+        { error: "No puedes editar este paste" },
+        { status: 403 }
+      );
+    }
+
     const { title, content } = await req.json();
 
     const paste = await prisma.paste.update({
