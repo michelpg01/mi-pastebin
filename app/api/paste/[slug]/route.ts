@@ -16,7 +16,7 @@ export async function GET(
       },
     });
 
-    if (!paste) {
+    if (!paste || paste.deletedAt) {
       return NextResponse.json(
         { error: "Paste no encontrado" },
         { status: 404 }
@@ -27,6 +27,7 @@ export async function GET(
       title: paste.title,
       content: paste.content,
       userId: paste.userId,
+      visibility: paste.visibility,
     });
   } catch (error) {
     console.error(error);
@@ -73,7 +74,7 @@ export async function PUT(
       },
     });
 
-    if (!existingPaste) {
+    if (!existingPaste || existingPaste.deletedAt) {
       return NextResponse.json(
         { error: "Paste no encontrado" },
         { status: 404 }
@@ -87,7 +88,8 @@ export async function PUT(
       );
     }
 
-    const { title, content } = await req.json();
+    const { title, content, visibility } =
+      await req.json();
 
     const paste = await prisma.paste.update({
       where: {
@@ -96,6 +98,7 @@ export async function PUT(
       data: {
         title,
         content,
+        visibility,
       },
     });
 
@@ -108,6 +111,77 @@ export async function PUT(
 
     return NextResponse.json(
       { error: "Error al actualizar" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: Request,
+  context: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: "No autorizado" },
+        { status: 401 }
+      );
+    }
+
+    const user = await prisma.user.findUnique({
+      where: {
+        email: session.user.email,
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Usuario no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    const { slug } = await context.params;
+
+    const paste = await prisma.paste.findUnique({
+      where: {
+        slug,
+      },
+    });
+
+    if (!paste || paste.deletedAt) {
+      return NextResponse.json(
+        { error: "Paste no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    if (paste.userId !== user.id) {
+      return NextResponse.json(
+        { error: "No puedes borrar este paste" },
+        { status: 403 }
+      );
+    }
+
+    await prisma.paste.update({
+      where: {
+        slug,
+      },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      { error: "Error al borrar" },
       { status: 500 }
     );
   }
