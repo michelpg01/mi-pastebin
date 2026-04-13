@@ -1,8 +1,27 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  useParams,
+  useRouter,
+} from "next/navigation";
 import Editor from "@monaco-editor/react";
+
+type MonacoEditorType = any;
+
+type SeasonItem = {
+  seasonLabel: string;
+  line: number;
+};
+
+type SeriesMap = {
+  [seriesName: string]: SeasonItem[];
+};
 
 export default function EditPastePage() {
   const params = useParams();
@@ -13,16 +32,27 @@ export default function EditPastePage() {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [cursorLine, setCursorLine] = useState(1);
-  const [cursorCol, setCursorCol] = useState(1);
+  const [hasChanges, setHasChanges] =
+    useState(false);
+  const [cursorLine, setCursorLine] =
+    useState(1);
+  const [cursorCol, setCursorCol] =
+    useState(1);
+  const [expandedSeries, setExpandedSeries] =
+    useState<string | null>(null);
 
-  const autosaveRef = useRef<NodeJS.Timeout | null>(null);
+  const autosaveRef =
+    useRef<NodeJS.Timeout | null>(null);
+  const editorRef =
+    useRef<MonacoEditorType | null>(null);
 
   useEffect(() => {
     async function loadPaste() {
       try {
-        const res = await fetch(`/api/paste/${slug}`);
+        const res = await fetch(
+          `/api/paste/${slug}`
+        );
+
         if (!res.ok) return;
 
         const data = await res.json();
@@ -37,20 +67,26 @@ export default function EditPastePage() {
     loadPaste();
   }, [slug]);
 
-  const savePaste = async (silent = false) => {
+  const savePaste = async (
+    silent = false
+  ) => {
     try {
       if (!silent) setSaving(true);
 
-      const res = await fetch(`/api/paste/${slug}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title,
-          content,
-        }),
-      });
+      const res = await fetch(
+        `/api/paste/${slug}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            title,
+            content,
+          }),
+        }
+      );
 
       if (!res.ok) return;
 
@@ -79,20 +115,32 @@ export default function EditPastePage() {
 
     return () => {
       if (autosaveRef.current) {
-        clearTimeout(autosaveRef.current);
+        clearTimeout(
+          autosaveRef.current
+        );
       }
     };
-  }, [title, content, hasChanges, loading]);
+  }, [
+    title,
+    content,
+    hasChanges,
+    loading,
+  ]);
 
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+    const handleBeforeUnload = (
+      e: BeforeUnloadEvent
+    ) => {
       if (hasChanges) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener(
+      "beforeunload",
+      handleBeforeUnload
+    );
 
     return () => {
       window.removeEventListener(
@@ -104,12 +152,97 @@ export default function EditPastePage() {
 
   const copyContent = async () => {
     try {
-      await navigator.clipboard.writeText(content);
+      await navigator.clipboard.writeText(
+        content
+      );
       alert("Contenido copiado");
     } catch {
       alert("No se pudo copiar");
     }
   };
+
+  const goToLine = (line: number) => {
+    if (!editorRef.current) return;
+
+    editorRef.current.revealLineInCenter(
+      line
+    );
+
+    editorRef.current.setPosition({
+      lineNumber: line,
+      column: 1,
+    });
+
+    editorRef.current.focus();
+  };
+
+  const groupedSeries =
+    useMemo<SeriesMap>(() => {
+      const lines =
+        content.split("\n");
+
+      const map: SeriesMap = {};
+
+      lines.forEach(
+        (lineText, index) => {
+          const match =
+            lineText.match(
+              /group-title="([^"]+)"/
+            );
+
+          if (!match) return;
+
+          const fullTitle =
+            match[1];
+
+          let seriesName =
+            fullTitle;
+          let seasonLabel =
+            "General";
+
+          const seasonMatch =
+            fullTitle.match(
+              /(.*?)\s*-\s*(Temporada\s*\d+)/i
+            );
+
+          if (seasonMatch) {
+            seriesName =
+              seasonMatch[1].trim();
+            seasonLabel =
+              seasonMatch[2].trim();
+          }
+
+          if (
+            !map[seriesName]
+          ) {
+            map[
+              seriesName
+            ] = [];
+          }
+
+          const exists =
+            map[
+              seriesName
+            ].some(
+              (s) =>
+                s.seasonLabel ===
+                seasonLabel
+            );
+
+          if (!exists) {
+            map[
+              seriesName
+            ].push({
+              seasonLabel,
+              line:
+                index + 1,
+            });
+          }
+        }
+      );
+
+      return map;
+    }, [content]);
 
   if (loading) {
     return (
@@ -120,43 +253,60 @@ export default function EditPastePage() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white px-4 sm:px-6 lg:px-8 py-8">
-      <div className="w-full lg:w-[80vw] max-w-[1600px] mx-auto space-y-6">
+    <main className="min-h-screen bg-zinc-950 text-white px-3 sm:px-5 lg:px-6 py-6">
+      <div className="w-full max-w-[1900px] mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
           <h1 className="text-3xl sm:text-4xl font-bold text-yellow-500">
             Editar Paste
           </h1>
 
           <div className="flex gap-3 flex-wrap">
             <button
-              onClick={() => router.push(`/${slug}`)}
+              onClick={() =>
+                router.push(
+                  `/${slug}`
+                )
+              }
               className="bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded-xl font-semibold"
             >
               Salir
             </button>
 
             <button
-              onClick={() => router.push("/")}
+              onClick={() =>
+                router.push("/")
+              }
               className="bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-xl font-semibold"
             >
               Mis pastes
             </button>
 
             <div className="bg-zinc-900 border border-zinc-700 px-4 py-2 rounded-2xl text-zinc-300 font-semibold">
-              {content.split("\n").length} líneas
+              {
+                content.split(
+                  "\n"
+                ).length
+              }{" "}
+              líneas
             </div>
 
             <button
               disabled={saving}
-              onClick={() => savePaste(false)}
-              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-xl font-semibold transition disabled:opacity-50"
+              onClick={() =>
+                savePaste(false)
+              }
+              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-xl font-semibold disabled:opacity-50"
             >
-              {saving ? "Guardando..." : "Guardar cambios"}
+              {saving
+                ? "Guardando..."
+                : "Guardar cambios"}
             </button>
 
             <button
-              onClick={copyContent}
+              onClick={
+                copyContent
+              }
               className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-xl font-semibold"
             >
               Copiar
@@ -169,64 +319,182 @@ export default function EditPastePage() {
           type="text"
           value={title}
           onChange={(e) => {
-            setTitle(e.target.value);
-            setHasChanges(true);
+            setTitle(
+              e.target.value
+            );
+            setHasChanges(
+              true
+            );
           }}
           placeholder="Título del paste"
           className="w-full p-4 rounded-2xl bg-zinc-900 border border-zinc-700 outline-none"
         />
 
-        {/* Monaco */}
-        <div className="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden shadow-lg">
-          <div className="bg-zinc-950 border-b border-zinc-700 px-6 py-3 text-sm text-zinc-400 font-semibold">
-            {title || slug}
-          </div>
+        {/* Layout principal */}
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-4">
+          {/* Editor */}
+          <div className="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden shadow-lg">
+            <div className="bg-zinc-950 border-b border-zinc-700 px-6 py-3 text-sm text-zinc-400 font-semibold">
+              {title || slug}
+            </div>
 
-          <div className="h-[65vh] sm:h-[75vh]">
-            <Editor
-              height="100%"
-              defaultLanguage="plaintext"
-              theme="vs-dark"
-              value={content}
-              onChange={(value) => {
-                setContent(value || "");
-                setHasChanges(true);
-              }}
-              onMount={(editor) => {
-                editor.onDidChangeCursorPosition((e) => {
-                  setCursorLine(
-                    e.position.lineNumber
+            <div className="h-[72vh] sm:h-[80vh]">
+              <Editor
+                height="100%"
+                defaultLanguage="plaintext"
+                theme="vs-dark"
+                value={content}
+                onChange={(
+                  value
+                ) => {
+                  setContent(
+                    value || ""
                   );
-                  setCursorCol(e.position.column);
-                });
-              }}
-              options={{
-                fontSize: 15,
-                fontFamily:
-                  "JetBrains Mono, monospace",
-                lineHeight: 28,
-                minimap: {
-                  enabled: true,
-                },
-                automaticLayout: true,
-                scrollBeyondLastLine: false,
-                wordWrap: "on",
-                smoothScrolling: true,
-              }}
-            />
+                  setHasChanges(
+                    true
+                  );
+                }}
+                onMount={(
+                  editor
+                ) => {
+                  editorRef.current =
+                    editor;
+
+                  editor.onDidChangeCursorPosition(
+                    (
+                      e
+                    ) => {
+                      setCursorLine(
+                        e
+                          .position
+                          .lineNumber
+                      );
+                      setCursorCol(
+                        e
+                          .position
+                          .column
+                      );
+                    }
+                  );
+                }}
+                options={{
+                  fontSize: 15,
+                  fontFamily:
+                    "JetBrains Mono, monospace",
+                  lineHeight: 28,
+                  minimap: {
+                    enabled:
+                      true,
+                  },
+                  automaticLayout:
+                    true,
+                  scrollBeyondLastLine:
+                    false,
+                  wordWrap:
+                    "on",
+                  smoothScrolling:
+                    true,
+                }}
+              />
+            </div>
+
+            <div className="bg-zinc-950 border-t border-zinc-700 px-6 py-3 text-sm text-zinc-400 flex justify-between">
+              <span>
+                {hasChanges
+                  ? "Cambios sin guardar"
+                  : "Guardado"}
+              </span>
+
+              <span>
+                Línea{" "}
+                {
+                  cursorLine
+                }
+                , Col{" "}
+                {
+                  cursorCol
+                }
+              </span>
+            </div>
           </div>
 
-          <div className="bg-zinc-950 border-t border-zinc-700 px-6 py-3 text-sm text-zinc-400 flex justify-between">
-            <span>
-              {hasChanges
-                ? "Cambios sin guardar"
-                : "Guardado"}
-            </span>
+          {/* Sidebar inteligente */}
+          <aside className="bg-zinc-900 border border-zinc-700 rounded-3xl p-4 h-fit xl:sticky xl:top-4">
+            <h2 className="text-lg font-bold text-blue-400 mb-4">
+              Índice M3U
+            </h2>
 
-            <span>
-              Línea {cursorLine}, Col {cursorCol}
-            </span>
-          </div>
+            <div className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
+              {Object.keys(
+                groupedSeries
+              ).length ===
+              0 ? (
+                <p className="text-zinc-500 text-sm">
+                  No se detectaron series
+                </p>
+              ) : (
+                Object.entries(
+                  groupedSeries
+                ).map(
+                  ([
+                    seriesName,
+                    seasons,
+                  ]) => (
+                    <div
+                      key={
+                        seriesName
+                      }
+                      className="bg-zinc-800 rounded-2xl overflow-hidden"
+                    >
+                      <button
+                        onClick={() =>
+                          setExpandedSeries(
+                            expandedSeries ===
+                              seriesName
+                              ? null
+                              : seriesName
+                          )
+                        }
+                        className="w-full text-left px-4 py-3 hover:bg-zinc-700 font-semibold text-white"
+                      >
+                        {
+                          seriesName
+                        }
+                      </button>
+
+                      {expandedSeries ===
+                        seriesName && (
+                        <div className="border-t border-zinc-700">
+                          {seasons.map(
+                            (
+                              season,
+                              index
+                            ) => (
+                              <button
+                                key={
+                                  index
+                                }
+                                onClick={() =>
+                                  goToLine(
+                                    season.line
+                                  )
+                                }
+                                className="w-full text-left px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-700 border-b border-zinc-800"
+                              >
+                                {
+                                  season.seasonLabel
+                                }
+                              </button>
+                            )
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                )
+              )}
+            </div>
+          </aside>
         </div>
       </div>
     </main>
