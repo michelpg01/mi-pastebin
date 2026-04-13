@@ -24,6 +24,7 @@ export async function GET() {
     const pastes = await prisma.paste.findMany({
       where: {
         userId: user.id,
+        deletedAt: null,
       },
       orderBy: {
         createdAt: "desc",

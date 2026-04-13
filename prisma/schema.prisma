@@ -8,14 +8,16 @@ datasource db {
 }
 
 model Paste {
-  id        String   @id @default(cuid())
-  slug      String   @unique
-  title     String?
-  content   String
-  expiresAt DateTime?
-  createdAt DateTime @default(now())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
+  id         String    @id @default(cuid())
+  slug       String    @unique
+  title      String?
+  content    String
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  deletedAt  DateTime?
+  visibility String    @default("public")
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id])
 }
 
 model User {
