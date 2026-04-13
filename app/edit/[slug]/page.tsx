@@ -112,6 +112,14 @@ export default function EditPastePage() {
             <div className="bg-zinc-900 border border-zinc-700 px-4 py-2 rounded-2xl text-zinc-300 font-semibold">
               {lines.length} líneas
             </div>
+            <button
+              disabled={saving}
+              onClick={() => savePaste(false)}
+              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-xl font-semibold transition disabled:opacity-50"
+            >
+              {saving ? "Guardando..." : "Guardar cambios"}
+            </button>
+
             <button onClick={copyContent} className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-xl font-semibold">
               Copiar
             </button>
@@ -168,13 +176,6 @@ export default function EditPastePage() {
           </div>
         </div>
 
-        <button
-          disabled={saving}
-          onClick={() => savePaste(false)}
-          className="px-6 py-3 bg-yellow-600 rounded-xl hover:bg-yellow-500 font-semibold transition disabled:opacity-50"
-        >
-          {saving ? "Guardando..." : "Guardar cambios"}
-        </button>
       </div>
     </main>
   );
