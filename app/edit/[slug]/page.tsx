@@ -168,29 +168,6 @@ export default function EditPastePage() {
     loading,
   ]);
 
-  useEffect(() => {
-    const handleBeforeUnload = (
-      e: BeforeUnloadEvent
-    ) => {
-      if (hasChanges) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-
-    window.addEventListener(
-      "beforeunload",
-      handleBeforeUnload
-    );
-
-    return () => {
-      window.removeEventListener(
-        "beforeunload",
-        handleBeforeUnload
-      );
-    };
-  }, [hasChanges]);
-
   const copyContent = async () => {
     try {
       await navigator.clipboard.writeText(
@@ -218,8 +195,6 @@ export default function EditPastePage() {
   };
 
   const goToBottom = () => {
-    if (!editorRef.current) return;
-
     const totalLines =
       content.split("\n").length;
 
@@ -233,18 +208,14 @@ export default function EditPastePage() {
     const blocks: string[] = [];
     let currentBlock: string[] = [];
 
-    for (let i = 0; i < lines.length; i++) {
-      const line =
-        lines[i];
-
+    for (const line of lines) {
       if (
         line.startsWith(
           "#EXTGRP:"
         )
       ) {
         if (
-          currentBlock.length >
-          0
+          currentBlock.length
         ) {
           blocks.push(
             currentBlock.join(
@@ -260,8 +231,7 @@ export default function EditPastePage() {
     }
 
     if (
-      currentBlock.length >
-      0
+      currentBlock.length
     ) {
       blocks.push(
         currentBlock.join(
@@ -270,14 +240,16 @@ export default function EditPastePage() {
       );
     }
 
-    const sortedBlocks =
+    const sorted =
       blocks.sort(
         (a, b) => {
           const getName = (
-            block: string
+            txt: string
           ) =>
-            block
-              .split("\n")[0]
+            txt
+              .split(
+                "\n"
+              )[0]
               .replace(
                 "#EXTGRP:",
                 ""
@@ -303,98 +275,103 @@ export default function EditPastePage() {
       );
 
     setContent(
-      sortedBlocks.join(
+      sorted.join(
         "\n"
       )
     );
 
     setHasChanges(true);
-
-    setTimeout(() => {
-      goToLine(1);
-    }, 200);
   };
 
   const groupedSeries =
     useMemo<SeriesMap>(() => {
-      const lines =
-        content.split("\n");
-
       const map: SeriesMap = {};
 
-      lines.forEach(
-        (lineText, index) => {
-          const match =
-            lineText.match(
-              /group-title="([^"]+)"/
-            );
+      content
+        .split("\n")
+        .forEach(
+          (
+            line,
+            index
+          ) => {
+            const match =
+              line.match(
+                /group-title="([^"]+)"/
+              );
 
-          if (!match) return;
+            if (!match)
+              return;
 
-          const fullTitle =
-            match[1];
+            const full =
+              match[1];
 
-          let seriesName =
-            fullTitle;
-          let seasonLabel =
-            "General";
+            let name =
+              full;
+            let season =
+              "General";
 
-          const seasonMatch =
-            fullTitle.match(
-              /(.*?)\s*-\s*(Temporada\s*\d+)/i
-            );
+            const seasonMatch =
+              full.match(
+                /(.*?)\s*-\s*(Temporada\s*\d+)/i
+              );
 
-          if (seasonMatch) {
-            seriesName =
-              seasonMatch[1].trim();
-            seasonLabel =
-              seasonMatch[2].trim();
+            if (
+              seasonMatch
+            ) {
+              name =
+                seasonMatch[1].trim();
+              season =
+                seasonMatch[2].trim();
+            }
+
+            if (
+              !map[name]
+            ) {
+              map[
+                name
+              ] = [];
+            }
+
+            const exists =
+              map[
+                name
+              ].some(
+                (
+                  item
+                ) =>
+                  item.seasonLabel ===
+                  season
+              );
+
+            if (
+              !exists
+            ) {
+              map[
+                name
+              ].push({
+                seasonLabel:
+                  season,
+                line:
+                  index +
+                  1,
+              });
+            }
           }
-
-          if (
-            !map[
-              seriesName
-            ]
-          ) {
-            map[
-              seriesName
-            ] = [];
-          }
-
-          const exists =
-            map[
-              seriesName
-            ].some(
-              (s) =>
-                s.seasonLabel ===
-                seasonLabel
-            );
-
-          if (!exists) {
-            map[
-              seriesName
-            ].push({
-              seasonLabel,
-              line:
-                index + 1,
-            });
-          }
-        }
-      );
+        );
 
       return map;
     }, [content]);
 
   if (loading) {
     return (
-      <main className="h-screen bg-black text-white flex items-center justify-center">
+      <main className="h-screen theme-bg flex items-center justify-center">
         Cargando...
       </main>
     );
   }
 
   return (
-    <main className="h-screen bg-zinc-950 text-white px-3 sm:px-5 lg:px-6 py-3 overflow-hidden">
+    <main className="h-screen theme-bg px-3 sm:px-5 lg:px-6 py-3 overflow-hidden">
       <div className="w-full max-w-[1900px] mx-auto h-full flex flex-col gap-3">
         {/* Header */}
         <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 shrink-0">
@@ -409,7 +386,7 @@ export default function EditPastePage() {
                   `/${slug}`
                 )
               }
-              className="bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded-xl font-semibold"
+              className="bg-zinc-700 hover:bg-zinc-600 text-white px-4 py-2 rounded-xl font-semibold"
             >
               Salir
             </button>
@@ -418,12 +395,12 @@ export default function EditPastePage() {
               onClick={() =>
                 router.push("/")
               }
-              className="bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-xl font-semibold"
+              className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-xl font-semibold"
             >
               Mis pastes
             </button>
 
-            <div className="bg-zinc-900 border border-zinc-700 px-4 py-2 rounded-2xl text-zinc-300 font-semibold">
+            <div className="theme-card px-4 py-2 rounded-2xl font-semibold">
               {
                 content.split(
                   "\n"
@@ -436,7 +413,7 @@ export default function EditPastePage() {
               onClick={
                 sortM3UContent
               }
-              className="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-xl font-semibold"
+              className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl font-semibold"
             >
               Ordenar A-Z
             </button>
@@ -445,7 +422,7 @@ export default function EditPastePage() {
               onClick={
                 goToBottom
               }
-              className="bg-cyan-600 hover:bg-cyan-500 px-4 py-2 rounded-xl font-semibold"
+              className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-xl font-semibold"
             >
               ↓ Final
             </button>
@@ -455,7 +432,7 @@ export default function EditPastePage() {
               onClick={() =>
                 savePaste(false)
               }
-              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-xl font-semibold disabled:opacity-50"
+              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl font-semibold"
             >
               {saving
                 ? "Guardando..."
@@ -466,14 +443,13 @@ export default function EditPastePage() {
               onClick={
                 copyContent
               }
-              className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-xl font-semibold"
+              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl font-semibold"
             >
               Copiar
             </button>
           </div>
         </div>
 
-        {/* Título */}
         <input
           type="text"
           value={title}
@@ -486,48 +462,55 @@ export default function EditPastePage() {
             );
           }}
           placeholder="Título del paste"
-          className="w-full p-3 rounded-2xl bg-zinc-900 border border-zinc-700 outline-none shrink-0"
+          className="w-full p-3 rounded-2xl theme-input outline-none shrink-0"
         />
 
-        {/* Layout */}
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-4 flex-1 min-h-0">
           {/* Editor */}
-          <div className="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-0">
-            <div className="bg-zinc-950 border-b border-zinc-700 px-6 py-3 text-sm text-zinc-400 font-semibold shrink-0">
+          <div className="theme-card rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-0">
+            <div className="px-6 py-3 text-sm opacity-70 font-semibold shrink-0 border-b border-black/10 dark:border-white/10">
               {title || slug}
             </div>
 
             <div className="flex-1 min-h-0">
               <Editor
                 height="100%"
-                defaultLanguage="plaintext"
                 language="m3u"
-                theme={editorTheme}
-                value={content}
-                beforeMount={(monaco) => {
-                  monaco.languages.register({
-                    id: "m3u",
-                  });
+                theme={
+                  editorTheme
+                }
+                value={
+                  content
+                }
+                beforeMount={(
+                  monaco
+                ) => {
+                  monaco.languages.register(
+                    {
+                      id: "m3u",
+                    }
+                  );
 
                   monaco.languages.setMonarchTokensProvider(
                     "m3u",
                     {
-                      tokenizer: {
-                        root: [
-                          [
-                            /^#EXTGRP:.*/,
-                            "keyword",
+                      tokenizer:
+                        {
+                          root: [
+                            [
+                              /^#EXTGRP:.*/,
+                              "keyword",
+                            ],
+                            [
+                              /^#EXTINF:.*/,
+                              "string",
+                            ],
+                            [
+                              /^https?:\/\/.*$/,
+                              "number",
+                            ],
                           ],
-                          [
-                            /^#EXTINF:.*/,
-                            "string",
-                          ],
-                          [
-                            /^https?:\/\/.*$/,
-                            "number",
-                          ],
-                        ],
-                      },
+                        },
                     }
                   );
 
@@ -556,7 +539,8 @@ export default function EditPastePage() {
                             "60A5FA",
                         },
                       ],
-                      colors: {},
+                      colors:
+                        {},
                     }
                   );
 
@@ -570,22 +554,34 @@ export default function EditPastePage() {
                           token:
                             "keyword",
                           foreground:
-                            "7C3AED",
+                            "9333EA",
+                          fontStyle:
+                            "bold",
                         },
                         {
                           token:
                             "string",
                           foreground:
-                            "15803D",
+                            "16A34A",
+                          fontStyle:
+                            "bold",
                         },
                         {
                           token:
                             "number",
                           foreground:
                             "2563EB",
+                          fontStyle:
+                            "bold",
                         },
                       ],
-                      colors: {},
+                      colors:
+                        {
+                          "editor.background":
+                            "#FFFFFF",
+                          "editor.foreground":
+                            "#111827",
+                        },
                     }
                   );
                 }}
@@ -593,7 +589,8 @@ export default function EditPastePage() {
                   value
                 ) => {
                   setContent(
-                    value || ""
+                    value ||
+                      ""
                   );
                   setHasChanges(
                     true
@@ -627,23 +624,22 @@ export default function EditPastePage() {
                   fontFamily:
                     "JetBrains Mono, monospace",
                   lineHeight: 26,
-                  minimap: {
-                    enabled:
-                      true,
-                  },
+                  minimap:
+                    {
+                      enabled:
+                        true,
+                    },
                   automaticLayout:
                     true,
                   scrollBeyondLastLine:
                     false,
                   wordWrap:
                     "on",
-                  smoothScrolling:
-                    true,
                 }}
               />
             </div>
 
-            <div className="bg-zinc-950 border-t border-zinc-700 px-6 py-2 text-sm text-zinc-400 flex justify-between shrink-0">
+            <div className="px-6 py-2 text-sm opacity-70 flex justify-between shrink-0 border-t border-black/10 dark:border-white/10">
               <span>
                 {hasChanges
                   ? "Cambios sin guardar"
@@ -664,8 +660,8 @@ export default function EditPastePage() {
           </div>
 
           {/* Sidebar */}
-          <aside className="bg-zinc-900 border border-zinc-700 rounded-3xl p-4 flex flex-col min-h-0">
-            <h2 className="text-lg font-bold text-blue-400 mb-4 shrink-0">
+          <aside className="theme-card rounded-3xl p-4 flex flex-col min-h-0">
+            <h2 className="text-lg font-bold text-blue-500 mb-4 shrink-0">
               Índice M3U
             </h2>
 
@@ -674,7 +670,7 @@ export default function EditPastePage() {
                 groupedSeries
               ).length ===
               0 ? (
-                <p className="text-zinc-500 text-sm">
+                <p className="opacity-70 text-sm">
                   No se detectaron series
                 </p>
               ) : (
@@ -682,49 +678,49 @@ export default function EditPastePage() {
                   groupedSeries
                 ).map(
                   ([
-                    seriesName,
+                    name,
                     seasons,
                   ]) => (
                     <div
                       key={
-                        seriesName
+                        name
                       }
-                      className="bg-zinc-800 rounded-2xl overflow-hidden"
+                      className="rounded-2xl overflow-hidden bg-black/10 dark:bg-white/5"
                     >
                       <button
                         onClick={() =>
                           setExpandedSeries(
                             expandedSeries ===
-                              seriesName
+                              name
                               ? null
-                              : seriesName
+                              : name
                           )
                         }
-                        className="w-full text-left px-4 py-3 hover:bg-zinc-700 font-semibold text-white"
+                        className="w-full text-left px-4 py-3 font-semibold"
                       >
                         {
-                          seriesName
+                          name
                         }
                       </button>
 
                       {expandedSeries ===
-                        seriesName && (
-                        <div className="border-t border-zinc-700">
+                        name && (
+                        <div>
                           {seasons.map(
                             (
                               season,
-                              index
+                              i
                             ) => (
                               <button
                                 key={
-                                  index
+                                  i
                                 }
                                 onClick={() =>
                                   goToLine(
                                     season.line
                                   )
                                 }
-                                className="w-full text-left px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-700 border-b border-zinc-800"
+                                className="w-full text-left px-4 py-3 text-sm hover:bg-black/10 dark:hover:bg-white/5"
                               >
                                 {
                                   season.seasonLabel

@@ -9,11 +9,14 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] =
+    useState<"dark" | "light">("dark");
 
   useEffect(() => {
     const saved =
-      localStorage.getItem("theme") || "dark";
+      (localStorage.getItem("theme") as
+        | "dark"
+        | "light") || "dark";
 
     setTheme(saved);
 
@@ -22,23 +25,32 @@ export default function RootLayout({
       "dark"
     );
 
-    document.documentElement.classList.add(saved);
+    document.documentElement.classList.add(
+      saved
+    );
   }, []);
 
   const toggleTheme = () => {
-    const newTheme =
-      theme === "dark" ? "light" : "dark";
+    const nextTheme =
+      theme === "dark"
+        ? "light"
+        : "dark";
 
-    setTheme(newTheme);
+    setTheme(nextTheme);
 
-    localStorage.setItem("theme", newTheme);
+    localStorage.setItem(
+      "theme",
+      nextTheme
+    );
 
     document.documentElement.classList.remove(
       "light",
       "dark"
     );
 
-    document.documentElement.classList.add(newTheme);
+    document.documentElement.classList.add(
+      nextTheme
+    );
   };
 
   return (
@@ -46,7 +58,10 @@ export default function RootLayout({
       <body>
         <button
           onClick={toggleTheme}
-          className="fixed top-4 right-4 z-[9999] px-4 py-2 rounded-xl font-semibold shadow-lg bg-zinc-800 text-white dark:bg-zinc-800 dark:text-white light:bg-white light:text-black border"
+          className="fixed bottom-5 left-5 z-[9999] px-4 py-2 rounded-2xl font-semibold shadow-xl border backdrop-blur-md transition-all duration-300
+          bg-zinc-900/90 text-white border-zinc-700
+          hover:scale-105
+          light:bg-white/90 light:text-zinc-900 light:border-zinc-300"
         >
           {theme === "dark"
             ? "☀ Claro"
