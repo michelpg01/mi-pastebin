@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 function generateSlug(length = 6) {
   const chars =
@@ -24,6 +26,8 @@ function getExpiration(expires: string) {
     now.setHours(now.getHours() + 1);
   } else if (expires === "1d") {
     now.setDate(now.getDate() + 1);
+  } else if (expires === "7d") {
+    now.setDate(now.getDate() + 7);
   } else {
     return null;
   }
@@ -33,9 +37,23 @@ function getExpiration(expires: string) {
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+
     const { title, content, expires } = await req.json();
 
     const slug = generateSlug(6);
+
+    let userId = null;
+
+    if (session?.user?.email) {
+      const user = await prisma.user.findUnique({
+        where: {
+          email: session.user.email,
+        },
+      });
+
+      userId = user?.id || null;
+    }
 
     const paste = await prisma.paste.create({
       data: {
@@ -43,6 +61,7 @@ export async function POST(req: Request) {
         title,
         content,
         expiresAt: getExpiration(expires),
+        userId,
       },
     });
 

@@ -10,17 +10,34 @@ export default function Home() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [expires, setExpires] = useState("10m");
-  const [result, setResult] = useState<any>(null);
   const [misPastes, setMisPastes] = useState<any[]>([]);
 
   const router = useRouter();
 
+  const cargarPastes = async () => {
+    if (!session) {
+      setMisPastes([]);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/mis-pastes");
+      const data = await res.json();
+
+      setMisPastes(
+        data.map((paste: any) => ({
+          title: paste.title || "Sin título",
+          url: `/${paste.slug}`,
+        }))
+      );
+    } catch (error) {
+      console.error("Error cargando pastes:", error);
+    }
+  };
+
   useEffect(() => {
-    const saved = JSON.parse(
-      localStorage.getItem("misPastes") || "[]"
-    );
-    setMisPastes(saved);
-  }, []);
+    cargarPastes();
+  }, [session]);
 
   const createPaste = async () => {
     const res = await fetch("/api/paste", {
@@ -37,24 +54,7 @@ export default function Home() {
 
     const data = await res.json();
 
-    setResult(data);
-
-    const saved = JSON.parse(
-      localStorage.getItem("misPastes") || "[]"
-    );
-
-    saved.unshift({
-      title: title || "Sin título",
-      url: data.url,
-      createdAt: new Date().toISOString(),
-    });
-
-    localStorage.setItem(
-      "misPastes",
-      JSON.stringify(saved)
-    );
-
-    setMisPastes(saved);
+    await cargarPastes();
 
     try {
       await navigator.clipboard.writeText(
@@ -69,18 +69,13 @@ export default function Home() {
 
   const deletePasteFromHistory = (indexToDelete: number) => {
     const confirmDelete = window.confirm(
-      "¿Seguro que quieres borrar este paste del historial?"
+      "¿Seguro que quieres quitar este paste de la lista?"
     );
 
     if (!confirmDelete) return;
 
     const updated = misPastes.filter(
       (_, index) => index !== indexToDelete
-    );
-
-    localStorage.setItem(
-      "misPastes",
-      JSON.stringify(updated)
     );
 
     setMisPastes(updated);
@@ -158,7 +153,7 @@ export default function Home() {
           </button>
         </div>
 
-        {misPastes.length > 0 && (
+        {session && misPastes.length > 0 && (
           <div className="bg-zinc-900 rounded-2xl border border-zinc-700 p-6 mt-8">
             <h2 className="text-2xl font-bold text-blue-400 mb-4">
               Mis pastes
@@ -172,6 +167,7 @@ export default function Home() {
                 >
                   <a href={paste.url} className="flex-1">
                     <div>{paste.title}</div>
+
                     <div className="text-sm text-zinc-400">
                       {paste.url}
                     </div>
@@ -183,7 +179,7 @@ export default function Home() {
                     }
                     className="ml-4 px-4 py-2 bg-red-600 rounded-xl"
                   >
-                    Borrar
+                    Quitar
                   </button>
                 </div>
               ))}
