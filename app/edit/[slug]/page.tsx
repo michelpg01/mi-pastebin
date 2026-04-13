@@ -63,16 +63,16 @@ export default function EditPastePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-black text-white p-8">
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
         Cargando...
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white p-8">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <h1 className="text-4xl font-bold text-yellow-500">
+    <main className="min-h-screen bg-zinc-950 text-white px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full lg:w-[80vw] max-w-[1600px] mx-auto space-y-6">
+        <h1 className="text-3xl sm:text-4xl font-bold text-yellow-500">
           Editar Paste
         </h1>
 
@@ -80,18 +80,20 @@ export default function EditPastePage() {
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full p-4 rounded-2xl bg-zinc-900 border border-zinc-700"
+          placeholder="Título del paste"
+          className="w-full p-4 rounded-2xl bg-zinc-900 border border-zinc-700 text-base sm:text-lg"
         />
 
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          className="w-full h-[500px] p-4 rounded-2xl bg-zinc-900 border border-zinc-700 font-mono"
+          placeholder="Escribe aquí..."
+          className="w-full h-[65vh] sm:h-[75vh] p-4 rounded-2xl bg-zinc-900 border border-zinc-700 font-mono text-sm sm:text-base leading-6 sm:leading-7 resize-none"
         />
 
         <button
           onClick={savePaste}
-          className="px-6 py-3 bg-yellow-600 rounded-xl hover:bg-yellow-500"
+          className="px-6 py-3 bg-yellow-600 rounded-xl hover:bg-yellow-500 font-semibold transition"
         >
           Guardar cambios
         </button>
