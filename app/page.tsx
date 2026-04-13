@@ -75,6 +75,8 @@ export default function Home() {
       await cargarPastes();
 
       router.push(data.url);
+    } catch (error) {
+      console.error(error);
     } finally {
       setCreating(false);
     }
@@ -87,30 +89,39 @@ export default function Home() {
 
     if (!ok) return;
 
-    await fetch(`/api/paste/${slug}`, {
-      method: "DELETE",
-    });
+    try {
+      await fetch(`/api/paste/${slug}`, {
+        method: "DELETE",
+      });
 
-    await cargarPastes();
+      await cargarPastes();
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const restorePaste = async (slug: string) => {
-    await fetch(`/api/paste/${slug}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        restore: true,
-      }),
-    });
+    try {
+      await fetch(`/api/paste/${slug}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          restore: true,
+        }),
+      });
 
-    await cargarPastes();
+      await cargarPastes();
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white px-4 sm:px-6 py-8">
       <div className="max-w-[1700px] mx-auto">
+        {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between gap-4 mb-8">
           <h1 className="text-4xl sm:text-5xl font-bold text-blue-500">
             Mi Pastebin
@@ -137,8 +148,9 @@ export default function Home() {
           )}
         </div>
 
+        {/* Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
-          {/* editor */}
+          {/* Editor */}
           <div className="space-y-6">
             <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-4 flex flex-col xl:flex-row gap-4 xl:items-center xl:justify-between sticky top-4 z-20">
               <div className="flex flex-wrap gap-3">
@@ -151,6 +163,7 @@ export default function Home() {
                   <option value="1h">1 hora</option>
                   <option value="1d">1 día</option>
                   <option value="7d">7 días</option>
+
                   {session && (
                     <option value="never">
                       Nunca
@@ -168,9 +181,11 @@ export default function Home() {
                   <option value="public">
                     Público
                   </option>
+
                   <option value="unlisted">
                     Oculto
                   </option>
+
                   {session && (
                     <option value="private">
                       Privado
@@ -182,7 +197,7 @@ export default function Home() {
               <button
                 onClick={createPaste}
                 disabled={creating}
-                className="px-6 py-3 bg-blue-600 rounded-xl"
+                className="px-6 py-3 bg-blue-600 rounded-xl hover:bg-blue-500 transition font-semibold disabled:opacity-50"
               >
                 {creating
                   ? "Creando..."
@@ -209,9 +224,10 @@ export default function Home() {
             />
           </div>
 
-          {/* panel */}
+          {/* Panel lateral */}
           {session && (
             <div className="bg-zinc-900 rounded-2xl border border-zinc-700 p-6 h-fit lg:sticky lg:top-4">
+              {/* Tabs */}
               <div className="flex gap-2 mb-6">
                 <button
                   onClick={() =>
@@ -241,57 +257,88 @@ export default function Home() {
               </div>
 
               <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-2">
+                {/* Activos */}
                 {tab === "activos" &&
-                  misPastes.map((paste, i) => (
-                    <div
-                      key={i}
-                      className="p-4 rounded-xl bg-zinc-800"
-                    >
-                      <div>
-                        {paste.title}
+                  (misPastes.length > 0 ? (
+                    misPastes.map((paste, i) => (
+                      <div
+                        key={i}
+                        className="p-4 rounded-xl bg-zinc-800"
+                      >
+                        {/* titulo + badge */}
+                        <div className="flex justify-between items-center gap-3">
+                          <div className="font-semibold text-white">
+                            {paste.title}
+                          </div>
+
+                          <span
+                            className={`text-xs px-3 py-1 rounded-full font-medium ${
+                              paste.visibility ===
+                              "private"
+                                ? "bg-red-600/20 text-red-400"
+                                : paste.visibility ===
+                                  "unlisted"
+                                ? "bg-yellow-600/20 text-yellow-400"
+                                : "bg-green-600/20 text-green-400"
+                            }`}
+                          >
+                            {paste.visibility ===
+                            "private"
+                              ? "Privado"
+                              : paste.visibility ===
+                                "unlisted"
+                              ? "Oculto"
+                              : "Público"}
+                          </span>
+                        </div>
+
+                        <div className="text-sm text-zinc-400 mt-2 break-all">
+                          {paste.url}
+                        </div>
+
+                        <div className="flex gap-2 mt-4 flex-wrap">
+                          <button
+                            onClick={() =>
+                              router.push(
+                                paste.url
+                              )
+                            }
+                            className="px-3 py-2 bg-blue-600 rounded-lg text-sm"
+                          >
+                            Abrir
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              router.push(
+                                `/edit/${paste.slug}`
+                              )
+                            }
+                            className="px-3 py-2 bg-yellow-600 rounded-lg text-sm"
+                          >
+                            Editar
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              deletePaste(
+                                paste.slug
+                              )
+                            }
+                            className="px-3 py-2 bg-red-600 rounded-lg text-sm"
+                          >
+                            Borrar
+                          </button>
+                        </div>
                       </div>
-
-                      <div className="text-sm text-zinc-400 mt-2">
-                        {paste.url}
-                      </div>
-
-                      <div className="flex gap-2 mt-4">
-                        <button
-                          onClick={() =>
-                            router.push(
-                              paste.url
-                            )
-                          }
-                          className="px-3 py-2 bg-blue-600 rounded-lg text-sm"
-                        >
-                          Abrir
-                        </button>
-
-                        <button
-                          onClick={() =>
-                            router.push(
-                              `/edit/${paste.slug}`
-                            )
-                          }
-                          className="px-3 py-2 bg-yellow-600 rounded-lg text-sm"
-                        >
-                          Editar
-                        </button>
-
-                        <button
-                          onClick={() =>
-                            deletePaste(
-                              paste.slug
-                            )
-                          }
-                          className="px-3 py-2 bg-red-600 rounded-lg text-sm"
-                        >
-                          Borrar
-                        </button>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="text-zinc-400">
+                      No tienes pastes todavía.
                     </div>
                   ))}
 
+                {/* Papelera */}
                 {tab === "papelera" &&
                   (papelera.length > 0 ? (
                     papelera.map((paste, i) => (
@@ -299,7 +346,7 @@ export default function Home() {
                         key={i}
                         className="p-4 rounded-xl bg-zinc-800"
                       >
-                        <div>
+                        <div className="font-semibold">
                           {paste.title}
                         </div>
 
