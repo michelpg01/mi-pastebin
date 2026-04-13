@@ -36,6 +36,7 @@ export default function Home() {
           url: `/${paste.slug}`,
           slug: paste.slug,
           visibility: paste.visibility,
+          expiresAt: paste.expiresAt,
         }))
       );
 
@@ -76,8 +77,6 @@ export default function Home() {
       await cargarPastes();
 
       router.push(data.url);
-    } catch (error) {
-      console.error(error);
     } finally {
       setCreating(false);
     }
@@ -90,68 +89,81 @@ export default function Home() {
 
     if (!ok) return;
 
-    try {
-      await fetch(`/api/paste/${slug}`, {
-        method: "DELETE",
-      });
+    await fetch(`/api/paste/${slug}`, {
+      method: "DELETE",
+    });
 
-      await cargarPastes();
-    } catch (error) {
-      console.error(error);
-    }
+    await cargarPastes();
   };
 
   const restorePaste = async (slug: string) => {
-    try {
-      await fetch(`/api/paste/${slug}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          restore: true,
-        }),
-      });
+    await fetch(`/api/paste/${slug}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        restore: true,
+      }),
+    });
 
-      await cargarPastes();
-    } catch (error) {
-      console.error(error);
-    }
+    await cargarPastes();
   };
 
   const changeVisibility = async (
     slug: string,
     newVisibility: string
   ) => {
-    try {
-      const paste = misPastes.find(
-        (p) => p.slug === slug
-      );
+    const paste = misPastes.find(
+      (p) => p.slug === slug
+    );
 
-      if (!paste) return;
+    if (!paste) return;
 
-      await fetch(`/api/paste/${slug}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: paste.title,
-          content: paste.content || "",
-          visibility: newVisibility,
-        }),
-      });
+    await fetch(`/api/paste/${slug}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: paste.title,
+        content: paste.content || "",
+        visibility: newVisibility,
+      }),
+    });
 
-      await cargarPastes();
-    } catch (error) {
-      console.error(error);
-    }
+    await cargarPastes();
+  };
+
+  const changeExpiration = async (
+    slug: string,
+    newExpire: string
+  ) => {
+    const paste = misPastes.find(
+      (p) => p.slug === slug
+    );
+
+    if (!paste) return;
+
+    await fetch(`/api/paste/${slug}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: paste.title,
+        content: paste.content || "",
+        visibility: paste.visibility,
+        expires: newExpire,
+      }),
+    });
+
+    await cargarPastes();
   };
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white px-4 sm:px-6 py-8">
       <div className="max-w-[1700px] mx-auto">
-        {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between gap-4 mb-8">
           <h1 className="text-4xl sm:text-5xl font-bold text-blue-500">
             Mi Pastebin
@@ -179,20 +191,28 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
-          {/* Editor */}
           <div className="space-y-6">
             <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-4 flex flex-col xl:flex-row gap-4 xl:items-center xl:justify-between sticky top-4 z-20">
               <div className="flex flex-wrap gap-3">
                 <select
                   value={expires}
-                  onChange={(e) => setExpires(e.target.value)}
+                  onChange={(e) =>
+                    setExpires(e.target.value)
+                  }
                   className="bg-zinc-800 p-3 rounded-xl"
                 >
-                  <option value="10m">10 minutos</option>
-                  <option value="1h">1 hora</option>
-                  <option value="1d">1 día</option>
-                  <option value="7d">7 días</option>
-
+                  <option value="10m">
+                    10 minutos
+                  </option>
+                  <option value="1h">
+                    1 hora
+                  </option>
+                  <option value="1d">
+                    1 día
+                  </option>
+                  <option value="7d">
+                    7 días
+                  </option>
                   {session && (
                     <option value="never">
                       Nunca
@@ -251,7 +271,6 @@ export default function Home() {
             />
           </div>
 
-          {/* Panel lateral */}
           {session && (
             <div className="bg-zinc-900 rounded-2xl border border-zinc-700 p-6 h-fit lg:sticky lg:top-4">
               <div className="flex gap-2 mb-6">
@@ -296,7 +315,7 @@ export default function Home() {
                           </div>
 
                           <span
-                            className={`text-xs px-3 py-1 rounded-full font-medium ${
+                            className={`text-xs px-3 py-1 rounded-full ${
                               paste.visibility ===
                               "private"
                                 ? "bg-red-600/20 text-red-400"
@@ -306,13 +325,7 @@ export default function Home() {
                                 : "bg-green-600/20 text-green-400"
                             }`}
                           >
-                            {paste.visibility ===
-                            "private"
-                              ? "Privado"
-                              : paste.visibility ===
-                                "unlisted"
-                              ? "Oculto"
-                              : "Público"}
+                            {paste.visibility}
                           </span>
                         </div>
 
@@ -320,8 +333,7 @@ export default function Home() {
                           {paste.url}
                         </div>
 
-                        {/* selector privacidad */}
-                        <div className="mt-3">
+                        <div className="mt-3 flex gap-2 flex-wrap">
                           <select
                             value={
                               paste.visibility
@@ -342,6 +354,39 @@ export default function Home() {
                             </option>
                             <option value="private">
                               Privado
+                            </option>
+                          </select>
+
+                          <select
+                            defaultValue=""
+                            onChange={(e) =>
+                              changeExpiration(
+                                paste.slug,
+                                e.target.value
+                              )
+                            }
+                            className="bg-zinc-700 text-sm px-3 py-2 rounded-lg"
+                          >
+                            <option
+                              value=""
+                              disabled
+                            >
+                              Cambiar tiempo
+                            </option>
+                            <option value="10m">
+                              +10 min
+                            </option>
+                            <option value="1h">
+                              +1h
+                            </option>
+                            <option value="1d">
+                              +1 día
+                            </option>
+                            <option value="7d">
+                              +7 días
+                            </option>
+                            <option value="never">
+                              Nunca
                             </option>
                           </select>
                         </div>

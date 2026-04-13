@@ -11,9 +11,7 @@ export async function GET(
     const { slug } = await context.params;
 
     const paste = await prisma.paste.findUnique({
-      where: {
-        slug,
-      },
+      where: { slug },
     });
 
     if (!paste || paste.deletedAt) {
@@ -28,6 +26,7 @@ export async function GET(
       content: paste.content,
       userId: paste.userId,
       visibility: paste.visibility,
+      expiresAt: paste.expiresAt,
     });
   } catch (error) {
     console.error(error);
@@ -69,9 +68,7 @@ export async function PUT(
     const { slug } = await context.params;
 
     const existingPaste = await prisma.paste.findUnique({
-      where: {
-        slug,
-      },
+      where: { slug },
     });
 
     if (!existingPaste) {
@@ -90,12 +87,10 @@ export async function PUT(
 
     const body = await req.json();
 
-    // Restaurar desde papelera
+    // restaurar
     if (body.restore) {
       const paste = await prisma.paste.update({
-        where: {
-          slug,
-        },
+        where: { slug },
         data: {
           deletedAt: null,
         },
@@ -107,7 +102,6 @@ export async function PUT(
       });
     }
 
-    // Bloquear editar si está borrado
     if (existingPaste.deletedAt) {
       return NextResponse.json(
         { error: "Paste eliminado" },
@@ -115,16 +109,42 @@ export async function PUT(
       );
     }
 
-    const { title, content, visibility } = body;
+    const {
+      title,
+      content,
+      visibility,
+      expires,
+    } = body;
+
+    let expiresAt = existingPaste.expiresAt;
+
+    if (expires) {
+      const now = new Date();
+
+      if (expires === "10m") {
+        now.setMinutes(now.getMinutes() + 10);
+      } else if (expires === "1h") {
+        now.setHours(now.getHours() + 1);
+      } else if (expires === "1d") {
+        now.setDate(now.getDate() + 1);
+      } else if (expires === "7d") {
+        now.setDate(now.getDate() + 7);
+      } else if (expires === "never") {
+        expiresAt = null;
+      }
+
+      if (expires !== "never") {
+        expiresAt = now;
+      }
+    }
 
     const paste = await prisma.paste.update({
-      where: {
-        slug,
-      },
+      where: { slug },
       data: {
         title,
         content,
         visibility,
+        expiresAt,
       },
     });
 
@@ -172,9 +192,7 @@ export async function DELETE(
     const { slug } = await context.params;
 
     const paste = await prisma.paste.findUnique({
-      where: {
-        slug,
-      },
+      where: { slug },
     });
 
     if (!paste || paste.deletedAt) {
@@ -192,9 +210,7 @@ export async function DELETE(
     }
 
     await prisma.paste.update({
-      where: {
-        slug,
-      },
+      where: { slug },
       data: {
         deletedAt: new Date(),
       },
