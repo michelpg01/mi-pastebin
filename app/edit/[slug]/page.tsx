@@ -28,18 +28,24 @@ export default function EditPastePage() {
   const router = useRouter();
   const slug = params.slug as string;
 
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [title, setTitle] =
+    useState("");
+  const [content, setContent] =
+    useState("");
+  const [loading, setLoading] =
+    useState(true);
+  const [saving, setSaving] =
+    useState(false);
   const [hasChanges, setHasChanges] =
     useState(false);
   const [cursorLine, setCursorLine] =
     useState(1);
   const [cursorCol, setCursorCol] =
     useState(1);
-  const [expandedSeries, setExpandedSeries] =
-    useState<string | null>(null);
+  const [
+    expandedSeries,
+    setExpandedSeries,
+  ] = useState<string | null>(null);
   const [editorTheme, setEditorTheme] =
     useState("vs-dark");
 
@@ -49,10 +55,12 @@ export default function EditPastePage() {
     useRef<MonacoEditorType | null>(null);
 
   useEffect(() => {
-    document.body.style.overflow = "hidden";
+    document.body.style.overflow =
+      "hidden";
 
     return () => {
-      document.body.style.overflow = "auto";
+      document.body.style.overflow =
+        "auto";
     };
   }, []);
 
@@ -71,9 +79,9 @@ export default function EditPastePage() {
     updateTheme();
 
     const observer =
-      new MutationObserver(() => {
-        updateTheme();
-      });
+      new MutationObserver(() =>
+        updateTheme()
+      );
 
     observer.observe(
       document.documentElement,
@@ -90,16 +98,20 @@ export default function EditPastePage() {
   useEffect(() => {
     async function loadPaste() {
       try {
-        const res = await fetch(
-          `/api/paste/${slug}`
+        const res =
+          await fetch(
+            `/api/paste/${slug}`
+          );
+
+        const data =
+          await res.json();
+
+        setTitle(
+          data.title || ""
         );
-
-        if (!res.ok) return;
-
-        const data = await res.json();
-
-        setTitle(data.title || "");
-        setContent(data.content || "");
+        setContent(
+          data.content || ""
+        );
       } finally {
         setLoading(false);
       }
@@ -112,9 +124,10 @@ export default function EditPastePage() {
     silent = false
   ) => {
     try {
-      if (!silent) setSaving(true);
+      if (!silent)
+        setSaving(true);
 
-      const res = await fetch(
+      await fetch(
         `/api/paste/${slug}`,
         {
           method: "PUT",
@@ -129,33 +142,43 @@ export default function EditPastePage() {
         }
       );
 
-      if (!res.ok) return;
-
       setHasChanges(false);
 
       if (!silent) {
-        router.push(`/${slug}`);
+        router.push(
+          `/${slug}`
+        );
       }
     } finally {
-      if (!silent) {
+      if (!silent)
         setSaving(false);
-      }
     }
   };
 
   useEffect(() => {
-    if (!hasChanges || loading) return;
+    if (
+      !hasChanges ||
+      loading
+    )
+      return;
 
-    if (autosaveRef.current) {
-      clearTimeout(autosaveRef.current);
+    if (
+      autosaveRef.current
+    ) {
+      clearTimeout(
+        autosaveRef.current
+      );
     }
 
-    autosaveRef.current = setTimeout(() => {
-      savePaste(true);
-    }, 5000);
+    autosaveRef.current =
+      setTimeout(() => {
+        savePaste(true);
+      }, 5000);
 
     return () => {
-      if (autosaveRef.current) {
+      if (
+        autosaveRef.current
+      ) {
         clearTimeout(
           autosaveRef.current
         );
@@ -168,124 +191,60 @@ export default function EditPastePage() {
     loading,
   ]);
 
-  const copyContent = async () => {
-    try {
-      await navigator.clipboard.writeText(
-        content
-      );
-      alert("Contenido copiado");
-    } catch {
-      alert("No se pudo copiar");
-    }
-  };
+  const copyContent =
+    async () => {
+      try {
+        await navigator.clipboard.writeText(
+          content
+        );
 
-  const goToLine = (line: number) => {
-    if (!editorRef.current) return;
+        alert(
+          "Contenido copiado"
+        );
+      } catch {
+        alert(
+          "No se pudo copiar"
+        );
+      }
+    };
+
+  const goToLine = (
+    line: number
+  ) => {
+    if (
+      !editorRef.current
+    )
+      return;
 
     editorRef.current.revealLineInCenter(
       line
     );
 
-    editorRef.current.setPosition({
-      lineNumber: line,
-      column: 1,
-    });
+    editorRef.current.setPosition(
+      {
+        lineNumber:
+          line,
+        column: 1,
+      }
+    );
 
     editorRef.current.focus();
   };
 
-  const goToBottom = () => {
-    const totalLines =
-      content.split("\n").length;
-
-    goToLine(totalLines);
-  };
-
-  const sortM3UContent = () => {
-    const lines =
-      content.split("\n");
-
-    const blocks: string[] = [];
-    let currentBlock: string[] = [];
-
-    for (const line of lines) {
-      if (
-        line.startsWith(
-          "#EXTGRP:"
-        )
-      ) {
-        if (
-          currentBlock.length
-        ) {
-          blocks.push(
-            currentBlock.join(
-              "\n"
-            )
-          );
-        }
-
-        currentBlock = [line];
-      } else {
-        currentBlock.push(line);
-      }
-    }
-
-    if (
-      currentBlock.length
-    ) {
-      blocks.push(
-        currentBlock.join(
+  const goToBottom =
+    () => {
+      const total =
+        content.split(
           "\n"
-        )
-      );
-    }
+        ).length;
 
-    const sorted =
-      blocks.sort(
-        (a, b) => {
-          const getName = (
-            txt: string
-          ) =>
-            txt
-              .split(
-                "\n"
-              )[0]
-              .replace(
-                "#EXTGRP:",
-                ""
-              )
-              .replace(
-                /\(\d{4}\)/g,
-                ""
-              )
-              .trim()
-              .toLowerCase();
-
-          return getName(
-            a
-          ).localeCompare(
-            getName(b),
-            "es",
-            {
-              sensitivity:
-                "base",
-            }
-          );
-        }
-      );
-
-    setContent(
-      sorted.join(
-        "\n"
-      )
-    );
-
-    setHasChanges(true);
-  };
+      goToLine(total);
+    };
 
   const groupedSeries =
     useMemo<SeriesMap>(() => {
-      const map: SeriesMap = {};
+      const map: SeriesMap =
+        {};
 
       content
         .split("\n")
@@ -299,62 +258,30 @@ export default function EditPastePage() {
                 /group-title="([^"]+)"/
               );
 
-            if (!match)
+            if (
+              !match
+            )
               return;
 
-            const full =
+            const title =
               match[1];
 
-            let name =
-              full;
-            let season =
-              "General";
-
-            const seasonMatch =
-              full.match(
-                /(.*?)\s*-\s*(Temporada\s*\d+)/i
-              );
-
             if (
-              seasonMatch
-            ) {
-              name =
-                seasonMatch[1].trim();
-              season =
-                seasonMatch[2].trim();
-            }
-
-            if (
-              !map[name]
+              !map[
+                title
+              ]
             ) {
               map[
-                name
-              ] = [];
-            }
-
-            const exists =
-              map[
-                name
-              ].some(
-                (
-                  item
-                ) =>
-                  item.seasonLabel ===
-                  season
-              );
-
-            if (
-              !exists
-            ) {
-              map[
-                name
-              ].push({
-                seasonLabel:
-                  season,
-                line:
-                  index +
-                  1,
-              });
+                title
+              ] = [
+                {
+                  seasonLabel:
+                    title,
+                  line:
+                    index +
+                    1,
+                },
+              ];
             }
           }
         );
@@ -393,7 +320,9 @@ export default function EditPastePage() {
 
             <button
               onClick={() =>
-                router.push("/")
+                router.push(
+                  "/"
+                )
               }
               className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-xl font-semibold"
             >
@@ -411,15 +340,6 @@ export default function EditPastePage() {
 
             <button
               onClick={
-                sortM3UContent
-              }
-              className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl font-semibold"
-            >
-              Ordenar A-Z
-            </button>
-
-            <button
-              onClick={
                 goToBottom
               }
               className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-xl font-semibold"
@@ -428,11 +348,15 @@ export default function EditPastePage() {
             </button>
 
             <button
-              disabled={saving}
-              onClick={() =>
-                savePaste(false)
+              disabled={
+                saving
               }
-              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl font-semibold"
+              onClick={() =>
+                savePaste(
+                  false
+                )
+              }
+              className="bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-2 rounded-xl font-semibold"
             >
               {saving
                 ? "Guardando..."
@@ -451,7 +375,6 @@ export default function EditPastePage() {
         </div>
 
         <input
-          type="text"
           value={title}
           onChange={(e) => {
             setTitle(
@@ -461,11 +384,10 @@ export default function EditPastePage() {
               true
             );
           }}
-          placeholder="Título del paste"
           className="w-full p-3 rounded-2xl theme-input outline-none shrink-0"
         />
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-4 flex-1 min-h-0">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4 flex-1 min-h-0">
           {/* Editor */}
           <div className="theme-card rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-0">
             <div className="px-6 py-3 text-sm opacity-70 font-semibold shrink-0 border-b border-black/10 dark:border-white/10">
@@ -498,10 +420,6 @@ export default function EditPastePage() {
                         {
                           root: [
                             [
-                              /^#EXTGRP:.*/,
-                              "keyword",
-                            ],
-                            [
                               /^#EXTINF:.*/,
                               "string",
                             ],
@@ -520,12 +438,6 @@ export default function EditPastePage() {
                       base: "vs-dark",
                       inherit: true,
                       rules: [
-                        {
-                          token:
-                            "keyword",
-                          foreground:
-                            "C084FC",
-                        },
                         {
                           token:
                             "string",
@@ -552,27 +464,15 @@ export default function EditPastePage() {
                       rules: [
                         {
                           token:
-                            "keyword",
-                          foreground:
-                            "9333EA",
-                          fontStyle:
-                            "bold",
-                        },
-                        {
-                          token:
                             "string",
                           foreground:
                             "16A34A",
-                          fontStyle:
-                            "bold",
                         },
                         {
                           token:
                             "number",
                           foreground:
                             "2563EB",
-                          fontStyle:
-                            "bold",
                         },
                       ],
                       colors:
@@ -666,72 +566,39 @@ export default function EditPastePage() {
             </h2>
 
             <div className="space-y-3 overflow-y-auto flex-1 pr-1">
-              {Object.keys(
+              {Object.entries(
                 groupedSeries
-              ).length ===
-              0 ? (
-                <p className="opacity-70 text-sm">
-                  No se detectaron series
-                </p>
-              ) : (
-                Object.entries(
-                  groupedSeries
-                ).map(
-                  ([
-                    name,
-                    seasons,
-                  ]) => (
-                    <div
-                      key={
-                        name
-                      }
-                      className="rounded-2xl overflow-hidden bg-black/10 dark:bg-white/5"
-                    >
-                      <button
-                        onClick={() =>
-                          setExpandedSeries(
-                            expandedSeries ===
-                              name
-                              ? null
-                              : name
-                          )
-                        }
-                        className="w-full text-left px-4 py-3 font-semibold"
-                      >
-                        {
-                          name
-                        }
-                      </button>
-
-                      {expandedSeries ===
-                        name && (
-                        <div>
-                          {seasons.map(
-                            (
-                              season,
-                              i
-                            ) => (
-                              <button
-                                key={
-                                  i
-                                }
-                                onClick={() =>
-                                  goToLine(
-                                    season.line
-                                  )
-                                }
-                                className="w-full text-left px-4 py-3 text-sm hover:bg-black/10 dark:hover:bg-white/5"
-                              >
-                                {
-                                  season.seasonLabel
-                                }
-                              </button>
-                            )
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )
+              ).map(
+                ([
+                  name,
+                  items,
+                ]) => (
+                  <button
+                    key={
+                      name
+                    }
+                    onClick={() =>
+                      goToLine(
+                        items[0]
+                          .line
+                      )
+                    }
+                    className="
+                      w-full text-left px-4 py-4 rounded-2xl
+                      bg-zinc-100 dark:bg-zinc-800
+                      text-zinc-900 dark:text-white
+                      font-semibold
+                      shadow-sm
+                      hover:bg-zinc-200 dark:hover:bg-zinc-700
+                      hover:shadow-lg
+                      hover:scale-[1.02]
+                      active:scale-[0.98]
+                      transition-all duration-200
+                      cursor-pointer
+                    "
+                  >
+                    {name}
+                  </button>
                 )
               )}
             </div>

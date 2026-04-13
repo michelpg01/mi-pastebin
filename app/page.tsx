@@ -31,17 +31,25 @@ export default function Home() {
 
   const router = useRouter();
 
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, []);
+
   const formatRemainingTime = (
     expiresAt: string | null
   ) => {
     if (!expiresAt)
       return "Sin expiración";
 
-    const now = new Date();
-    const end = new Date(expiresAt);
-
     const diff =
-      end.getTime() - now.getTime();
+      new Date(
+        expiresAt
+      ).getTime() -
+      Date.now();
 
     if (diff <= 0)
       return "Expirado";
@@ -62,12 +70,9 @@ export default function Home() {
     if (hours < 24)
       return `Vence en ${hours} h`;
 
-    const days =
-      Math.floor(
-        hours / 24
-      );
-
-    return `Vence en ${days} días`;
+    return `Vence en ${Math.floor(
+      hours / 24
+    )} días`;
   };
 
   const copyToClipboard =
@@ -107,32 +112,11 @@ export default function Home() {
           await res.json();
 
         setMisPastes(
-          data.activos.map(
-            (paste: any) => ({
-              title:
-                paste.title ||
-                "Sin título",
-              content:
-                paste.content,
-              url: `/${paste.slug}`,
-              slug: paste.slug,
-              visibility:
-                paste.visibility,
-              expiresAt:
-                paste.expiresAt,
-            })
-          )
+          data.activos || []
         );
 
         setPapelera(
-          data.papelera.map(
-            (paste: any) => ({
-              title:
-                paste.title ||
-                "Sin título",
-              slug: paste.slug,
-            })
-          )
+          data.papelera || []
         );
       } catch (error) {
         console.error(
@@ -188,12 +172,12 @@ export default function Home() {
     async (
       slug: string
     ) => {
-      const ok =
-        confirm(
-          "¿Seguro que quieres mover este paste a la papelera?"
-        );
-
-      if (!ok) return;
+      if (
+        !confirm(
+          "¿Seguro?"
+        )
+      )
+        return;
 
       await fetch(
         `/api/paste/${slug}`,
@@ -203,7 +187,7 @@ export default function Home() {
         }
       );
 
-      await cargarPastes();
+      cargarPastes();
     };
 
   const restorePaste =
@@ -228,95 +212,14 @@ export default function Home() {
         }
       );
 
-      await cargarPastes();
-    };
-
-  const changeVisibility =
-    async (
-      slug: string,
-      newVisibility: string
-    ) => {
-      const paste =
-        misPastes.find(
-          (p) =>
-            p.slug ===
-            slug
-        );
-
-      if (!paste) return;
-
-      await fetch(
-        `/api/paste/${slug}`,
-        {
-          method:
-            "PUT",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify(
-            {
-              title:
-                paste.title,
-              content:
-                paste.content ||
-                "",
-              visibility:
-                newVisibility,
-            }
-          ),
-        }
-      );
-
-      await cargarPastes();
-    };
-
-  const changeExpiration =
-    async (
-      slug: string,
-      newExpire: string
-    ) => {
-      const paste =
-        misPastes.find(
-          (p) =>
-            p.slug ===
-            slug
-        );
-
-      if (!paste) return;
-
-      await fetch(
-        `/api/paste/${slug}`,
-        {
-          method:
-            "PUT",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify(
-            {
-              title:
-                paste.title,
-              content:
-                paste.content ||
-                "",
-              visibility:
-                paste.visibility,
-              expires:
-                newExpire,
-            }
-          ),
-        }
-      );
-
-      await cargarPastes();
+      cargarPastes();
     };
 
   return (
-    <main className="min-h-screen theme-bg px-4 sm:px-6 py-8">
-      <div className="max-w-[1700px] mx-auto">
-        <div className="flex flex-col lg:flex-row justify-between gap-4 mb-8">
+    <main className="h-screen theme-bg px-4 sm:px-6 py-4 overflow-hidden">
+      <div className="max-w-[1800px] mx-auto h-full flex flex-col">
+        {/* header */}
+        <div className="flex flex-col lg:flex-row justify-between gap-4 mb-4 shrink-0">
           <h1 className="text-4xl sm:text-5xl font-bold text-blue-500">
             Mi Pastebin
           </h1>
@@ -354,10 +257,12 @@ export default function Home() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
-          <div className="space-y-6">
-            <div className="theme-card rounded-2xl p-4 flex flex-col xl:flex-row gap-4 xl:items-center xl:justify-between sticky top-4 z-20">
-              <div className="flex flex-wrap gap-3">
+        {/* layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 flex-1 min-h-0">
+          {/* izquierda */}
+          <div className="flex flex-col gap-4 min-h-0">
+            <div className="theme-card rounded-2xl p-4 flex flex-wrap gap-3 justify-between shrink-0">
+              <div className="flex gap-3 flex-wrap">
                 <select
                   value={expires}
                   onChange={(e) =>
@@ -418,7 +323,7 @@ export default function Home() {
                 disabled={
                   creating
                 }
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl"
+                className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold"
               >
                 {creating
                   ? "Creando..."
@@ -434,24 +339,29 @@ export default function Home() {
                 )
               }
               placeholder="Título del paste"
-              className="w-full p-4 rounded-2xl theme-input"
+              className="w-full p-4 rounded-2xl theme-input shrink-0"
             />
 
-            <textarea
-              value={content}
-              onChange={(e) =>
-                setContent(
-                  e.target.value
-                )
-              }
-              placeholder="Escribe aquí..."
-              className="w-full h-[70vh] p-4 rounded-2xl theme-input font-mono"
-            />
+            <div className="flex-1 min-h-0">
+              <textarea
+                value={
+                  content
+                }
+                onChange={(e) =>
+                  setContent(
+                    e.target.value
+                  )
+                }
+                placeholder="Escribe aquí..."
+                className="w-full h-full min-h-0 p-4 rounded-2xl theme-input font-mono resize-none overflow-y-auto"
+              />
+            </div>
           </div>
 
+          {/* derecha */}
           {session && (
-            <div className="theme-card rounded-2xl p-6 h-fit lg:sticky lg:top-4">
-              <div className="flex gap-2 mb-6">
+            <div className="theme-card rounded-2xl p-6 flex flex-col min-h-0">
+              <div className="flex gap-2 mb-4 shrink-0">
                 <button
                   onClick={() =>
                     setTab(
@@ -489,151 +399,134 @@ export default function Home() {
                 </button>
               </div>
 
-              <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-2">
+              <div className="flex-1 overflow-y-auto pr-2 space-y-4">
                 {tab ===
                   "activos" &&
-                  (misPastes.length >
-                  0 ? (
-                    misPastes.map(
-                      (
-                        paste,
-                        i
-                      ) => (
-                        <div
-                          key={
-                            i
+                  misPastes.map(
+                    (
+                      paste: any,
+                      i
+                    ) => (
+                      <div
+                        key={
+                          i
+                        }
+                        className="theme-card p-4 rounded-2xl"
+                      >
+                        <div className="font-semibold text-lg">
+                          {
+                            paste.title
                           }
-                          className="p-4 rounded-xl theme-card"
-                        >
-                          <div className="font-semibold">
-                            {
-                              paste.title
-                            }
-                          </div>
-
-                          <div className="text-sm opacity-70 mt-2 break-all">
-                            {
-                              paste.url
-                            }
-                          </div>
-
-                          <div className="mt-2 text-sm">
-                            {formatRemainingTime(
-                              paste.expiresAt
-                            )}
-                          </div>
-
-                          <div className="flex gap-2 mt-4 flex-wrap">
-                            <button
-                              onClick={() =>
-                                router.push(
-                                  paste.url
-                                )
-                              }
-                              className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm"
-                            >
-                              Abrir
-                            </button>
-
-                            <button
-                              onClick={() =>
-                                copyToClipboard(
-                                  `${window.location.origin}${paste.url}`,
-                                  "Enlace"
-                                )
-                              }
-                              className="px-3 py-2 bg-cyan-600 text-white rounded-lg text-sm"
-                            >
-                              Copiar
-                              link
-                            </button>
-
-                            <button
-                              onClick={() =>
-                                copyToClipboard(
-                                  `${window.location.origin}/raw/${paste.slug}`,
-                                  "RAW"
-                                )
-                              }
-                              className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm"
-                            >
-                              Copiar
-                              RAW
-                            </button>
-
-                            <button
-                              onClick={() =>
-                                router.push(
-                                  `/edit/${paste.slug}`
-                                )
-                              }
-                              className="px-3 py-2 bg-yellow-600 text-white rounded-lg text-sm"
-                            >
-                              Editar
-                            </button>
-
-                            <button
-                              onClick={() =>
-                                deletePaste(
-                                  paste.slug
-                                )
-                              }
-                              className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm"
-                            >
-                              Borrar
-                            </button>
-                          </div>
                         </div>
-                      )
-                    )
-                  ) : (
-                    <div className="opacity-70">
-                      No tienes
-                      pastes
-                      todavía.
-                    </div>
-                  ))}
 
-                {tab ===
-                  "papelera" &&
-                  (papelera.length >
-                  0 ? (
-                    papelera.map(
-                      (
-                        paste,
-                        i
-                      ) => (
-                        <div
-                          key={
-                            i
+                        <div className="text-sm opacity-70 mt-1">
+                          /{
+                            paste.slug
                           }
-                          className="p-4 rounded-xl theme-card"
-                        >
-                          <div className="font-semibold">
-                            {
-                              paste.title
+                        </div>
+
+                        <div className="text-sm mt-2">
+                          {formatRemainingTime(
+                            paste.expiresAt
+                          )}
+                        </div>
+
+                        <div className="flex gap-2 mt-4 flex-wrap">
+                          <button
+                            onClick={() =>
+                              router.push(
+                                `/${paste.slug}`
+                              )
                             }
-                          </div>
+                            className="px-3 py-2 bg-blue-600 text-white rounded-lg"
+                          >
+                            Abrir
+                          </button>
 
                           <button
                             onClick={() =>
-                              restorePaste(
+                              copyToClipboard(
+                                `${window.location.origin}/${paste.slug}`,
+                                "Enlace"
+                              )
+                            }
+                            className="px-3 py-2 bg-cyan-600 text-white rounded-lg"
+                          >
+                            Copiar
+                            link
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              copyToClipboard(
+                                `${window.location.origin}/raw/${paste.slug}`,
+                                "RAW"
+                              )
+                            }
+                            className="px-3 py-2 bg-purple-600 text-white rounded-lg"
+                          >
+                            Copiar
+                            RAW
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              router.push(
+                                `/edit/${paste.slug}`
+                              )
+                            }
+                            className="px-3 py-2 bg-yellow-600 text-white rounded-lg"
+                          >
+                            Editar
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              deletePaste(
                                 paste.slug
                               )
                             }
-                            className="mt-4 px-3 py-2 bg-green-600 text-white rounded-lg text-sm"
+                            className="px-3 py-2 bg-red-600 text-white rounded-lg"
                           >
-                            Restaurar
+                            Borrar
                           </button>
                         </div>
-                      )
+                      </div>
                     )
-                  ) : (
-                    <div className="opacity-70">
-                      Papelera
-                      vacía.
-                    </div>
-                  ))}
+                  )}
+
+                {tab ===
+                  "papelera" &&
+                  papelera.map(
+                    (
+                      paste: any,
+                      i
+                    ) => (
+                      <div
+                        key={
+                          i
+                        }
+                        className="theme-card p-4 rounded-2xl"
+                      >
+                        <div className="font-semibold">
+                          {
+                            paste.title
+                          }
+                        </div>
+
+                        <button
+                          onClick={() =>
+                            restorePaste(
+                              paste.slug
+                            )
+                          }
+                          className="mt-4 px-4 py-2 bg-green-600 text-white rounded-xl"
+                        >
+                          Restaurar
+                        </button>
+                      </div>
+                    )
+                  )}
               </div>
             </div>
           )}
