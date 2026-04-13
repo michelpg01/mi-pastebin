@@ -578,10 +578,10 @@ export default function EditPastePage() {
                               }
                               className="
                                 w-full text-left px-4 py-3 rounded-xl
-                                bg-zinc-200 dark:bg-zinc-700
+                                bg-orange-300 dark:bg-orange-700
                                 text-zinc-800 dark:text-zinc-100
                                 text-sm font-medium
-                                hover:bg-zinc-300 dark:hover:bg-zinc-600
+                                hover:bg-orange-400 dark:hover:bg-orange-600
                                 hover:translate-x-1
                                 active:scale-[0.98]
                                 transition-all duration-200
