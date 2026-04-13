@@ -40,6 +40,8 @@ export default function EditPastePage() {
     useState(1);
   const [expandedSeries, setExpandedSeries] =
     useState<string | null>(null);
+  const [editorTheme, setEditorTheme] =
+    useState("vs-dark");
 
   const autosaveRef =
     useRef<NodeJS.Timeout | null>(null);
@@ -52,6 +54,37 @@ export default function EditPastePage() {
     return () => {
       document.body.style.overflow = "auto";
     };
+  }, []);
+
+  useEffect(() => {
+    const updateTheme = () => {
+      const isLight =
+        document.documentElement.classList.contains(
+          "light"
+        );
+
+      setEditorTheme(
+        isLight ? "vs" : "vs-dark"
+      );
+    };
+
+    updateTheme();
+
+    const observer =
+      new MutationObserver(() => {
+        updateTheme();
+      });
+
+    observer.observe(
+      document.documentElement,
+      {
+        attributes: true,
+        attributeFilter: ["class"],
+      }
+    );
+
+    return () =>
+      observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -190,16 +223,7 @@ export default function EditPastePage() {
     const totalLines =
       content.split("\n").length;
 
-    editorRef.current.revealLineInCenter(
-      totalLines
-    );
-
-    editorRef.current.setPosition({
-      lineNumber: totalLines,
-      column: 1,
-    });
-
-    editorRef.current.focus();
+    goToLine(totalLines);
   };
 
   const sortM3UContent = () => {
@@ -477,8 +501,94 @@ export default function EditPastePage() {
               <Editor
                 height="100%"
                 defaultLanguage="plaintext"
-                theme="vs-dark"
+                language="m3u"
+                theme={editorTheme}
                 value={content}
+                beforeMount={(monaco) => {
+                  monaco.languages.register({
+                    id: "m3u",
+                  });
+
+                  monaco.languages.setMonarchTokensProvider(
+                    "m3u",
+                    {
+                      tokenizer: {
+                        root: [
+                          [
+                            /^#EXTGRP:.*/,
+                            "keyword",
+                          ],
+                          [
+                            /^#EXTINF:.*/,
+                            "string",
+                          ],
+                          [
+                            /^https?:\/\/.*$/,
+                            "number",
+                          ],
+                        ],
+                      },
+                    }
+                  );
+
+                  monaco.editor.defineTheme(
+                    "vs-dark",
+                    {
+                      base: "vs-dark",
+                      inherit: true,
+                      rules: [
+                        {
+                          token:
+                            "keyword",
+                          foreground:
+                            "C084FC",
+                        },
+                        {
+                          token:
+                            "string",
+                          foreground:
+                            "4ADE80",
+                        },
+                        {
+                          token:
+                            "number",
+                          foreground:
+                            "60A5FA",
+                        },
+                      ],
+                      colors: {},
+                    }
+                  );
+
+                  monaco.editor.defineTheme(
+                    "vs",
+                    {
+                      base: "vs",
+                      inherit: true,
+                      rules: [
+                        {
+                          token:
+                            "keyword",
+                          foreground:
+                            "7C3AED",
+                        },
+                        {
+                          token:
+                            "string",
+                          foreground:
+                            "15803D",
+                        },
+                        {
+                          token:
+                            "number",
+                          foreground:
+                            "2563EB",
+                        },
+                      ],
+                      colors: {},
+                    }
+                  );
+                }}
                 onChange={(
                   value
                 ) => {
