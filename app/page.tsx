@@ -18,6 +18,46 @@ export default function Home() {
 
   const router = useRouter();
 
+  const formatRemainingTime = (
+    expiresAt: string | null
+  ) => {
+    if (!expiresAt) {
+      return "Sin expiración";
+    }
+
+    const now = new Date();
+    const end = new Date(expiresAt);
+
+    const diff =
+      end.getTime() - now.getTime();
+
+    if (diff <= 0) {
+      return "Expirado";
+    }
+
+    const minutes = Math.floor(
+      diff / 1000 / 60
+    );
+
+    if (minutes < 60) {
+      return `Vence en ${minutes} min`;
+    }
+
+    const hours = Math.floor(
+      minutes / 60
+    );
+
+    if (hours < 24) {
+      return `Vence en ${hours} h`;
+    }
+
+    const days = Math.floor(
+      hours / 24
+    );
+
+    return `Vence en ${days} días`;
+  };
+
   const cargarPastes = async () => {
     if (!session) {
       setMisPastes([]);
@@ -331,6 +371,23 @@ export default function Home() {
 
                         <div className="text-sm text-zinc-400 mt-2 break-all">
                           {paste.url}
+                        </div>
+
+                        <div
+                          className={`text-sm mt-2 font-medium ${
+                            !paste.expiresAt
+                              ? "text-green-400"
+                              : new Date(
+                                  paste.expiresAt
+                                ) <
+                                new Date()
+                              ? "text-red-400"
+                              : "text-yellow-400"
+                          }`}
+                        >
+                          {formatRemainingTime(
+                            paste.expiresAt
+                          )}
                         </div>
 
                         <div className="mt-3 flex gap-2 flex-wrap">

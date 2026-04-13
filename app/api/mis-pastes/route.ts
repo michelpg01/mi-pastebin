@@ -27,6 +27,22 @@ export async function GET() {
       });
     }
 
+    // borrar definitivo > 7 días en papelera
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(
+      sevenDaysAgo.getDate() - 7
+    );
+
+    await prisma.paste.deleteMany({
+      where: {
+        userId: user.id,
+        deletedAt: {
+          not: null,
+          lte: sevenDaysAgo,
+        },
+      },
+    });
+
     const activos = await prisma.paste.findMany({
       where: {
         userId: user.id,
