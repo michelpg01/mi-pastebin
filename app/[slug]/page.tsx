@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export default async function PastePage({
   params,
@@ -13,8 +15,26 @@ export default async function PastePage({
     where: { slug },
   });
 
-  if (!paste) {
+  if (!paste || paste.deletedAt) {
     notFound();
+  }
+
+  if (paste.visibility === "private") {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.email) {
+      notFound();
+    }
+
+    const user = await prisma.user.findUnique({
+      where: {
+        email: session.user.email,
+      },
+    });
+
+    if (!user || user.id !== paste.userId) {
+      notFound();
+    }
   }
 
   const lines = paste.content.split("\n");
@@ -22,7 +42,6 @@ export default async function PastePage({
   return (
     <main className="min-h-screen bg-black text-white px-6 py-10">
       <div className="max-w-6xl mx-auto">
-        {/* TOP */}
         <div className="mb-6 flex items-center justify-between">
           <Link
             href="/"
@@ -49,7 +68,6 @@ export default async function PastePage({
           </div>
         </div>
 
-        {/* TÍTULO + CONTADOR */}
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-5xl font-bold text-blue-500">
             {paste.title || `Paste: ${paste.slug}`}
@@ -60,7 +78,6 @@ export default async function PastePage({
           </div>
         </div>
 
-        {/* EDITOR ESTILO VSCODE */}
         <div className="bg-zinc-900 border border-zinc-700 rounded-3xl shadow-lg overflow-hidden">
           <div className="flex bg-zinc-950 border-b border-zinc-700 px-6 py-3 text-sm text-zinc-400">
             <span className="font-semibold">

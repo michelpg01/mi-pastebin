@@ -29,6 +29,8 @@ export default function Home() {
         data.map((paste: any) => ({
           title: paste.title || "Sin título",
           url: `/${paste.slug}`,
+          slug: paste.slug,
+          visibility: paste.visibility,
         }))
       );
     } catch (error) {
@@ -64,7 +66,6 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-zinc-950 text-white px-4 sm:px-6 py-8">
       <div className="max-w-[1700px] mx-auto">
-        {/* header */}
         <div className="flex flex-col lg:flex-row justify-between gap-4 mb-8">
           <h1 className="text-4xl sm:text-5xl font-bold text-blue-500">
             Mi Pastebin
@@ -93,11 +94,8 @@ export default function Home() {
           )}
         </div>
 
-        {/* layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
-          {/* editor */}
           <div className="space-y-6">
-            {/* barra superior */}
             <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-4 flex flex-col xl:flex-row gap-4 xl:items-center xl:justify-between sticky top-4 z-20">
               <div className="flex flex-wrap gap-3">
                 <select
@@ -109,6 +107,7 @@ export default function Home() {
                   <option value="1h">1 hora</option>
                   <option value="1d">1 día</option>
                   <option value="7d">7 días</option>
+
                   {session && (
                     <option value="never">
                       Nunca
@@ -125,6 +124,10 @@ export default function Home() {
                 >
                   <option value="public">
                     Público
+                  </option>
+
+                  <option value="unlisted">
+                    Oculto (link funciona)
                   </option>
 
                   {session && (
@@ -163,7 +166,6 @@ export default function Home() {
             />
           </div>
 
-          {/* mis pastes */}
           {session && (
             <div className="bg-zinc-900 rounded-2xl border border-zinc-700 p-6 h-fit lg:sticky lg:top-4">
               <h2 className="text-2xl font-bold text-blue-400 mb-6">
@@ -178,11 +180,15 @@ export default function Home() {
                       href={paste.url}
                       className="block p-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 transition"
                     >
-                      <div>
-                        {paste.title}
+                      <div className="flex justify-between items-center">
+                        <span>{paste.title}</span>
+
+                        <span className="text-xs px-2 py-1 rounded bg-zinc-700 text-zinc-300">
+                          {paste.visibility}
+                        </span>
                       </div>
 
-                      <div className="text-sm text-zinc-400">
+                      <div className="text-sm text-zinc-400 mt-2">
                         {paste.url}
                       </div>
                     </a>

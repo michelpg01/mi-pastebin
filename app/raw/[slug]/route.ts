@@ -12,9 +12,15 @@ export async function GET(
     },
   });
 
-  if (!paste) {
+  if (!paste || paste.deletedAt) {
     return new Response("No encontrado", {
       status: 404,
+    });
+  }
+
+  if (paste.visibility === "private") {
+    return new Response("Privado", {
+      status: 403,
     });
   }
 

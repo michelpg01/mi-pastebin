@@ -20,17 +20,11 @@ function generateSlug(length = 6) {
 function getExpiration(expires: string) {
   const now = new Date();
 
-  if (expires === "10m") {
-    now.setMinutes(now.getMinutes() + 10);
-  } else if (expires === "1h") {
-    now.setHours(now.getHours() + 1);
-  } else if (expires === "1d") {
-    now.setDate(now.getDate() + 1);
-  } else if (expires === "7d") {
-    now.setDate(now.getDate() + 7);
-  } else {
-    return null;
-  }
+  if (expires === "10m") now.setMinutes(now.getMinutes() + 10);
+  else if (expires === "1h") now.setHours(now.getHours() + 1);
+  else if (expires === "1d") now.setDate(now.getDate() + 1);
+  else if (expires === "7d") now.setDate(now.getDate() + 7);
+  else return null;
 
   return now;
 }
@@ -39,7 +33,8 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
 
-    const { title, content, expires } = await req.json();
+    const { title, content, expires, visibility } =
+      await req.json();
 
     const slug = generateSlug(6);
 
@@ -61,6 +56,7 @@ export async function POST(req: Request) {
         title,
         content,
         expiresAt: getExpiration(expires),
+        visibility: visibility || "public",
         userId,
       },
     });
