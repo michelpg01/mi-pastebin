@@ -47,6 +47,14 @@ export default function EditPastePage() {
     useRef<MonacoEditorType | null>(null);
 
   useEffect(() => {
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, []);
+
+  useEffect(() => {
     async function loadPaste() {
       try {
         const res = await fetch(
@@ -221,13 +229,9 @@ export default function EditPastePage() {
           );
         }
 
-        currentBlock = [
-          line,
-        ];
+        currentBlock = [line];
       } else {
-        currentBlock.push(
-          line
-        );
+        currentBlock.push(line);
       }
     }
 
@@ -247,26 +251,19 @@ export default function EditPastePage() {
         (a, b) => {
           const getName = (
             block: string
-          ) => {
-            const firstLine =
-              block
-                .split(
-                  "\n"
-                )[0]
-                .replace(
-                  "#EXTGRP:",
-                  ""
-                )
-                .trim();
-
-            return firstLine
+          ) =>
+            block
+              .split("\n")[0]
+              .replace(
+                "#EXTGRP:",
+                ""
+              )
               .replace(
                 /\(\d{4}\)/g,
                 ""
               )
               .trim()
               .toLowerCase();
-          };
 
           return getName(
             a
@@ -286,6 +283,7 @@ export default function EditPastePage() {
         "\n"
       )
     );
+
     setHasChanges(true);
 
     setTimeout(() => {
@@ -365,22 +363,22 @@ export default function EditPastePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+      <main className="h-screen bg-black text-white flex items-center justify-center">
         Cargando...
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white px-3 sm:px-5 lg:px-6 py-6">
-      <div className="w-full max-w-[1900px] mx-auto space-y-6">
+    <main className="h-screen bg-zinc-950 text-white px-3 sm:px-5 lg:px-6 py-3 overflow-hidden">
+      <div className="w-full max-w-[1900px] mx-auto h-full flex flex-col gap-3">
         {/* Header */}
-        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 shrink-0">
           <h1 className="text-3xl sm:text-4xl font-bold text-yellow-500">
             Editar Paste
           </h1>
 
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-2 flex-wrap">
             <button
               onClick={() =>
                 router.push(
@@ -420,6 +418,15 @@ export default function EditPastePage() {
             </button>
 
             <button
+              onClick={
+                goToBottom
+              }
+              className="bg-cyan-600 hover:bg-cyan-500 px-4 py-2 rounded-xl font-semibold"
+            >
+              ↓ Final
+            </button>
+
+            <button
               disabled={saving}
               onClick={() =>
                 savePaste(false)
@@ -455,18 +462,18 @@ export default function EditPastePage() {
             );
           }}
           placeholder="Título del paste"
-          className="w-full p-4 rounded-2xl bg-zinc-900 border border-zinc-700 outline-none"
+          className="w-full p-3 rounded-2xl bg-zinc-900 border border-zinc-700 outline-none shrink-0"
         />
 
         {/* Layout */}
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-4 flex-1 min-h-0">
           {/* Editor */}
-          <div className="relative bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden shadow-lg">
-            <div className="bg-zinc-950 border-b border-zinc-700 px-6 py-3 text-sm text-zinc-400 font-semibold">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-0">
+            <div className="bg-zinc-950 border-b border-zinc-700 px-6 py-3 text-sm text-zinc-400 font-semibold shrink-0">
               {title || slug}
             </div>
 
-            <div className="h-[72vh] sm:h-[80vh]">
+            <div className="flex-1 min-h-0">
               <Editor
                 height="100%"
                 defaultLanguage="plaintext"
@@ -509,7 +516,7 @@ export default function EditPastePage() {
                   fontSize: 15,
                   fontFamily:
                     "JetBrains Mono, monospace",
-                  lineHeight: 28,
+                  lineHeight: 26,
                   minimap: {
                     enabled:
                       true,
@@ -526,17 +533,7 @@ export default function EditPastePage() {
               />
             </div>
 
-            {/* Flecha abajo */}
-            <button
-              onClick={
-                goToBottom
-              }
-              className="absolute bottom-20 right-6 z-20 bg-blue-600 hover:bg-blue-500 w-12 h-12 rounded-full text-2xl font-bold shadow-lg"
-            >
-              ↓
-            </button>
-
-            <div className="bg-zinc-950 border-t border-zinc-700 px-6 py-3 text-sm text-zinc-400 flex justify-between">
+            <div className="bg-zinc-950 border-t border-zinc-700 px-6 py-2 text-sm text-zinc-400 flex justify-between shrink-0">
               <span>
                 {hasChanges
                   ? "Cambios sin guardar"
@@ -557,12 +554,12 @@ export default function EditPastePage() {
           </div>
 
           {/* Sidebar */}
-          <aside className="bg-zinc-900 border border-zinc-700 rounded-3xl p-4 h-fit xl:sticky xl:top-4">
-            <h2 className="text-lg font-bold text-blue-400 mb-4">
+          <aside className="bg-zinc-900 border border-zinc-700 rounded-3xl p-4 flex flex-col min-h-0">
+            <h2 className="text-lg font-bold text-blue-400 mb-4 shrink-0">
               Índice M3U
             </h2>
 
-            <div className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
+            <div className="space-y-3 overflow-y-auto flex-1 pr-1">
               {Object.keys(
                 groupedSeries
               ).length ===
