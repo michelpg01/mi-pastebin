@@ -32,6 +32,7 @@ export default function Home() {
       setMisPastes(
         data.activos.map((paste: any) => ({
           title: paste.title || "Sin título",
+          content: paste.content,
           url: `/${paste.slug}`,
           slug: paste.slug,
           visibility: paste.visibility,
@@ -118,6 +119,35 @@ export default function Home() {
     }
   };
 
+  const changeVisibility = async (
+    slug: string,
+    newVisibility: string
+  ) => {
+    try {
+      const paste = misPastes.find(
+        (p) => p.slug === slug
+      );
+
+      if (!paste) return;
+
+      await fetch(`/api/paste/${slug}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: paste.title,
+          content: paste.content || "",
+          visibility: newVisibility,
+        }),
+      });
+
+      await cargarPastes();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-zinc-950 text-white px-4 sm:px-6 py-8">
       <div className="max-w-[1700px] mx-auto">
@@ -148,7 +178,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
           {/* Editor */}
           <div className="space-y-6">
@@ -181,11 +210,9 @@ export default function Home() {
                   <option value="public">
                     Público
                   </option>
-
                   <option value="unlisted">
                     Oculto
                   </option>
-
                   {session && (
                     <option value="private">
                       Privado
@@ -197,7 +224,7 @@ export default function Home() {
               <button
                 onClick={createPaste}
                 disabled={creating}
-                className="px-6 py-3 bg-blue-600 rounded-xl hover:bg-blue-500 transition font-semibold disabled:opacity-50"
+                className="px-6 py-3 bg-blue-600 rounded-xl"
               >
                 {creating
                   ? "Creando..."
@@ -227,7 +254,6 @@ export default function Home() {
           {/* Panel lateral */}
           {session && (
             <div className="bg-zinc-900 rounded-2xl border border-zinc-700 p-6 h-fit lg:sticky lg:top-4">
-              {/* Tabs */}
               <div className="flex gap-2 mb-6">
                 <button
                   onClick={() =>
@@ -257,7 +283,6 @@ export default function Home() {
               </div>
 
               <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-2">
-                {/* Activos */}
                 {tab === "activos" &&
                   (misPastes.length > 0 ? (
                     misPastes.map((paste, i) => (
@@ -265,7 +290,6 @@ export default function Home() {
                         key={i}
                         className="p-4 rounded-xl bg-zinc-800"
                       >
-                        {/* titulo + badge */}
                         <div className="flex justify-between items-center gap-3">
                           <div className="font-semibold text-white">
                             {paste.title}
@@ -294,6 +318,32 @@ export default function Home() {
 
                         <div className="text-sm text-zinc-400 mt-2 break-all">
                           {paste.url}
+                        </div>
+
+                        {/* selector privacidad */}
+                        <div className="mt-3">
+                          <select
+                            value={
+                              paste.visibility
+                            }
+                            onChange={(e) =>
+                              changeVisibility(
+                                paste.slug,
+                                e.target.value
+                              )
+                            }
+                            className="bg-zinc-700 text-sm px-3 py-2 rounded-lg"
+                          >
+                            <option value="public">
+                              Público
+                            </option>
+                            <option value="unlisted">
+                              Oculto
+                            </option>
+                            <option value="private">
+                              Privado
+                            </option>
+                          </select>
                         </div>
 
                         <div className="flex gap-2 mt-4 flex-wrap">
@@ -338,7 +388,6 @@ export default function Home() {
                     </div>
                   ))}
 
-                {/* Papelera */}
                 {tab === "papelera" &&
                   (papelera.length > 0 ? (
                     papelera.map((paste, i) => (
