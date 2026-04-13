@@ -109,6 +109,20 @@ export default function EditPastePage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h1 className="text-3xl sm:text-4xl font-bold text-yellow-500">Editar Paste</h1>
           <div className="flex gap-3 flex-wrap">
+            <button
+              onClick={() => router.push(`/${slug}`)}
+              className="bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded-xl font-semibold"
+            >
+              Salir
+            </button>
+
+            <button
+              onClick={() => router.push("/")}
+              className="bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-xl font-semibold"
+            >
+              Mis pastes
+            </button>
+
             <div className="bg-zinc-900 border border-zinc-700 px-4 py-2 rounded-2xl text-zinc-300 font-semibold">
               {lines.length} líneas
             </div>
