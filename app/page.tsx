@@ -58,6 +58,19 @@ export default function Home() {
     return `Vence en ${days} días`;
   };
 
+  const copyToClipboard = async (
+    text: string,
+    type: string
+  ) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert(`${type} copiado`);
+    } catch (error) {
+      console.error(error);
+      alert("No se pudo copiar");
+    }
+  };
+
   const cargarPastes = async () => {
     if (!session) {
       setMisPastes([]);
@@ -458,6 +471,30 @@ export default function Home() {
                             className="px-3 py-2 bg-blue-600 rounded-lg text-sm"
                           >
                             Abrir
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              copyToClipboard(
+                                `${window.location.origin}${paste.url}`,
+                                "Enlace"
+                              )
+                            }
+                            className="px-3 py-2 bg-cyan-600 rounded-lg text-sm"
+                          >
+                            Copiar link
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              copyToClipboard(
+                                `${window.location.origin}/raw/${paste.slug}`,
+                                "RAW"
+                              )
+                            }
+                            className="px-3 py-2 bg-purple-600 rounded-lg text-sm"
+                          >
+                            Copiar RAW
                           </button>
 
                           <button
