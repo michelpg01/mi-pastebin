@@ -176,6 +176,123 @@ export default function EditPastePage() {
     editorRef.current.focus();
   };
 
+  const goToBottom = () => {
+    if (!editorRef.current) return;
+
+    const totalLines =
+      content.split("\n").length;
+
+    editorRef.current.revealLineInCenter(
+      totalLines
+    );
+
+    editorRef.current.setPosition({
+      lineNumber: totalLines,
+      column: 1,
+    });
+
+    editorRef.current.focus();
+  };
+
+  const sortM3UContent = () => {
+    const lines =
+      content.split("\n");
+
+    const blocks: string[] = [];
+    let currentBlock: string[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line =
+        lines[i];
+
+      if (
+        line.startsWith(
+          "#EXTGRP:"
+        )
+      ) {
+        if (
+          currentBlock.length >
+          0
+        ) {
+          blocks.push(
+            currentBlock.join(
+              "\n"
+            )
+          );
+        }
+
+        currentBlock = [
+          line,
+        ];
+      } else {
+        currentBlock.push(
+          line
+        );
+      }
+    }
+
+    if (
+      currentBlock.length >
+      0
+    ) {
+      blocks.push(
+        currentBlock.join(
+          "\n"
+        )
+      );
+    }
+
+    const sortedBlocks =
+      blocks.sort(
+        (a, b) => {
+          const getName = (
+            block: string
+          ) => {
+            const firstLine =
+              block
+                .split(
+                  "\n"
+                )[0]
+                .replace(
+                  "#EXTGRP:",
+                  ""
+                )
+                .trim();
+
+            return firstLine
+              .replace(
+                /\(\d{4}\)/g,
+                ""
+              )
+              .trim()
+              .toLowerCase();
+          };
+
+          return getName(
+            a
+          ).localeCompare(
+            getName(b),
+            "es",
+            {
+              sensitivity:
+                "base",
+            }
+          );
+        }
+      );
+
+    setContent(
+      sortedBlocks.join(
+        "\n"
+      )
+    );
+    setHasChanges(true);
+
+    setTimeout(() => {
+      goToLine(1);
+    }, 200);
+  };
+
   const groupedSeries =
     useMemo<SeriesMap>(() => {
       const lines =
@@ -213,7 +330,9 @@ export default function EditPastePage() {
           }
 
           if (
-            !map[seriesName]
+            !map[
+              seriesName
+            ]
           ) {
             map[
               seriesName
@@ -292,6 +411,15 @@ export default function EditPastePage() {
             </div>
 
             <button
+              onClick={
+                sortM3UContent
+              }
+              className="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-xl font-semibold"
+            >
+              Ordenar A-Z
+            </button>
+
+            <button
               disabled={saving}
               onClick={() =>
                 savePaste(false)
@@ -330,10 +458,10 @@ export default function EditPastePage() {
           className="w-full p-4 rounded-2xl bg-zinc-900 border border-zinc-700 outline-none"
         />
 
-        {/* Layout principal */}
+        {/* Layout */}
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-4">
           {/* Editor */}
-          <div className="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden shadow-lg">
+          <div className="relative bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden shadow-lg">
             <div className="bg-zinc-950 border-b border-zinc-700 px-6 py-3 text-sm text-zinc-400 font-semibold">
               {title || slug}
             </div>
@@ -398,6 +526,16 @@ export default function EditPastePage() {
               />
             </div>
 
+            {/* Flecha abajo */}
+            <button
+              onClick={
+                goToBottom
+              }
+              className="absolute bottom-20 right-6 z-20 bg-blue-600 hover:bg-blue-500 w-12 h-12 rounded-full text-2xl font-bold shadow-lg"
+            >
+              ↓
+            </button>
+
             <div className="bg-zinc-950 border-t border-zinc-700 px-6 py-3 text-sm text-zinc-400 flex justify-between">
               <span>
                 {hasChanges
@@ -418,7 +556,7 @@ export default function EditPastePage() {
             </div>
           </div>
 
-          {/* Sidebar inteligente */}
+          {/* Sidebar */}
           <aside className="bg-zinc-900 border border-zinc-700 rounded-3xl p-4 h-fit xl:sticky xl:top-4">
             <h2 className="text-lg font-bold text-blue-400 mb-4">
               Índice M3U
