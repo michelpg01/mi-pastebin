@@ -15,41 +15,50 @@ export default function EditPastePage() {
 
   useEffect(() => {
     async function loadPaste() {
-      const res = await fetch(`/${slug}`);
-      const html = await res.text();
+      try {
+        const res = await fetch(`/api/paste/${slug}`);
 
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, "text/html");
+        if (!res.ok) {
+          alert("No se pudo cargar el paste");
+          return;
+        }
 
-      const titleText =
-        doc.querySelector("h1")?.textContent || "";
+        const data = await res.json();
 
-      const contentText =
-        doc.querySelector("pre")?.textContent || "";
-
-      setTitle(titleText);
-      setContent(contentText);
-      setLoading(false);
+        setTitle(data.title || "");
+        setContent(data.content || "");
+      } catch (error) {
+        console.error("Error cargando paste:", error);
+      } finally {
+        setLoading(false);
+      }
     }
 
     loadPaste();
   }, [slug]);
 
   const savePaste = async () => {
-    const res = await fetch(`/api/paste/${slug}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        title,
-        content,
-      }),
-    });
+    try {
+      const res = await fetch(`/api/paste/${slug}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          content,
+        }),
+      });
 
-    const data = await res.json();
+      if (!res.ok) {
+        alert("Error al guardar");
+        return;
+      }
 
-    router.push(data.url);
+      router.push(`/${slug}`);
+    } catch (error) {
+      console.error("Error guardando:", error);
+    }
   };
 
   if (loading) {
@@ -77,7 +86,7 @@ export default function EditPastePage() {
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          className="w-full h-[500px] p-4 rounded-2xl bg-zinc-900 border border-zinc-700"
+          className="w-full h-[500px] p-4 rounded-2xl bg-zinc-900 border border-zinc-700 font-mono"
         />
 
         <button

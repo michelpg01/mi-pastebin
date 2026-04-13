@@ -1,4 +1,39 @@
 import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
+
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const { slug } = await context.params;
+
+    const paste = await prisma.paste.findUnique({
+      where: {
+        slug,
+      },
+    });
+
+    if (!paste) {
+      return NextResponse.json(
+        { error: "Paste no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      title: paste.title,
+      content: paste.content,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      { error: "Error al obtener paste" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function PUT(
   req: Request,
@@ -18,15 +53,16 @@ export async function PUT(
       },
     });
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       url: `/${paste.slug}`,
     });
   } catch (error) {
     console.error(error);
 
-    return new Response("Error al actualizar", {
-      status: 500,
-    });
+    return NextResponse.json(
+      { error: "Error al actualizar" },
+      { status: 500 }
+    );
   }
 }
