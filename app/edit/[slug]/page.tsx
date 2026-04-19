@@ -240,6 +240,46 @@ export default function EditPastePage() {
       goToLine(total);
     };
 
+  // 🔥 NUEVO: Ordenar A-Z
+  const sortM3U = () => {
+    const lines = content.split("\n");
+
+    const blocks: string[] = [];
+    let currentBlock: string[] = [];
+
+    for (const line of lines) {
+      if (line.startsWith("#EXTGRP:")) {
+        if (currentBlock.length) {
+          blocks.push(currentBlock.join("\n"));
+        }
+        currentBlock = [line];
+      } else {
+        currentBlock.push(line);
+      }
+    }
+
+    if (currentBlock.length) {
+      blocks.push(currentBlock.join("\n"));
+    }
+
+    const sorted = blocks.sort((a, b) => {
+      const getName = (txt: string) =>
+        txt
+          .split("\n")[0]
+          .replace("#EXTGRP:", "")
+          .replace(/\(\d{4}\)/g, "")
+          .trim()
+          .toLowerCase();
+
+      return getName(a).localeCompare(getName(b), "es", {
+        sensitivity: "base",
+      });
+    });
+
+    setContent(sorted.join("\n"));
+    setHasChanges(true);
+  };
+
   const groupedSeries =
     useMemo<SeriesMap>(() => {
       const map: SeriesMap =
@@ -340,6 +380,14 @@ export default function EditPastePage() {
           </h1>
 
           <div className="flex gap-2 flex-wrap">
+
+            <button
+              onClick={sortM3U}
+              className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl font-semibold"
+            >
+              Ordenar A-Z
+            </button>
+
             <button
               onClick={() =>
                 router.push(
