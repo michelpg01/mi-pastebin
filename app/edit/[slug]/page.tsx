@@ -49,6 +49,10 @@ export default function EditPastePage() {
   const [editorTheme, setEditorTheme] =
     useState("vs-dark");
 
+  // ✅ NUEVO
+  const [isMobile, setIsMobile] =
+    useState(false);
+
   const autosaveRef =
     useRef<NodeJS.Timeout | null>(null);
   const editorRef =
@@ -93,6 +97,28 @@ export default function EditPastePage() {
 
     return () =>
       observer.disconnect();
+  }, []);
+
+  // ✅ NUEVO
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(
+        window.innerWidth < 768
+      );
+    };
+
+    checkMobile();
+
+    window.addEventListener(
+      "resize",
+      checkMobile
+    );
+
+    return () =>
+      window.removeEventListener(
+        "resize",
+        checkMobile
+      );
   }, []);
 
   useEffect(() => {
@@ -240,7 +266,6 @@ export default function EditPastePage() {
       goToLine(total);
     };
 
-  // 🔥 NUEVO: Ordenar A-Z
   const sortM3U = () => {
     const lines = content.split("\n");
 
@@ -476,67 +501,93 @@ export default function EditPastePage() {
             </div>
 
             <div className="flex-1 min-h-0">
-              <Editor
-                height="100%"
-                language="m3u"
-                theme={
-                  editorTheme
-                }
-                value={
-                  content
-                }
-                onChange={(
-                  value
-                ) => {
-                  setContent(
-                    value ||
-                      ""
-                  );
-                  setHasChanges(
-                    true
-                  );
-                }}
-                onMount={(
-                  editor
-                ) => {
-                  editorRef.current =
-                    editor;
 
-                  editor.onDidChangeCursorPosition(
-                    (
-                      e
-                    ) => {
-                      setCursorLine(
+              {isMobile ? (
+                <textarea
+                  value={content}
+                  onChange={(e) => {
+                    setContent(
+                      e.target.value
+                    );
+                    setHasChanges(
+                      true
+                    );
+                  }}
+                  className="
+                    w-full h-full
+                    bg-transparent
+                    p-4
+                    outline-none
+                    resize-none
+                    font-mono
+                    text-sm
+                    overflow-auto
+                  "
+                  spellCheck={false}
+                />
+              ) : (
+                <Editor
+                  height="100%"
+                  language="m3u"
+                  theme={
+                    editorTheme
+                  }
+                  value={
+                    content
+                  }
+                  onChange={(
+                    value
+                  ) => {
+                    setContent(
+                      value ||
+                        ""
+                    );
+                    setHasChanges(
+                      true
+                    );
+                  }}
+                  onMount={(
+                    editor
+                  ) => {
+                    editorRef.current =
+                      editor;
+
+                    editor.onDidChangeCursorPosition(
+                      (
                         e
-                          .position
-                          .lineNumber
-                      );
-                      setCursorCol(
-                        e
-                          .position
-                          .column
-                      );
-                    }
-                  );
-                }}
-                options={{
-                  fontSize: 15,
-                  fontFamily:
-                    "JetBrains Mono, monospace",
-                  lineHeight: 26,
-                  minimap:
-                    {
-                      enabled:
-                        true,
-                    },
-                  automaticLayout:
-                    true,
-                  scrollBeyondLastLine:
-                    false,
-                  wordWrap:
-                    "on",
-                }}
-              />
+                      ) => {
+                        setCursorLine(
+                          e
+                            .position
+                            .lineNumber
+                        );
+                        setCursorCol(
+                          e
+                            .position
+                            .column
+                        );
+                      }
+                    );
+                  }}
+                  options={{
+                    fontSize: 15,
+                    fontFamily:
+                      "JetBrains Mono, monospace",
+                    lineHeight: 26,
+                    minimap:
+                      {
+                        enabled:
+                          true,
+                      },
+                    automaticLayout:
+                      true,
+                    scrollBeyondLastLine:
+                      false,
+                    wordWrap:
+                      "on",
+                  }}
+                />
+              )}
             </div>
 
             <div className="px-6 py-2 text-sm opacity-70 flex justify-between shrink-0 border-t border-black/10 dark:border-white/10">
