@@ -29,6 +29,8 @@ function generateSlug(length = 6) {
 }
 
 function getExpiration(expires: string) {
+  // ✅ Añadimos soporte explícito para "never"
+  if (!expires || expires === "never") return null; 
   const now = new Date();
   if (expires === "10m") now.setMinutes(now.getMinutes() + 10);
   else if (expires === "1h") now.setHours(now.getHours() + 1);
@@ -41,20 +43,26 @@ function getExpiration(expires: string) {
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    const { title, content, expires, visibility } = await req.json();
+    // ✅ Extraemos también el 'ownerEmail' que manda nuestro Panel IPTV
+    const { title, content, expires, visibility, ownerEmail } = await req.json();
 
     const slug = generateSlug(6);
     let userId = null;
 
-    // Si la petición viene de la web del pastebin con alguien logueado
+    // ✅ ENLAZAMOS LA LISTA A TU CUENTA DE GOOGLE
     if (session?.user?.email) {
+      // Si la petición viene de la web del pastebin con alguien logueado
       const user = await prisma.user.findUnique({
         where: { email: session.user.email },
       });
       userId = user?.id || null;
+    } else if (ownerEmail) {
+      // Si viene del Panel IPTV y nos manda tu correo
+      const user = await prisma.user.findUnique({
+        where: { email: ownerEmail },
+      });
+      userId = user?.id || null;
     }
-    // NOTA: Cuando tu panel envíe la lista, "userId" será null, 
-    // creando un paste anónimo pero con la visibilidad que le mandemos (ej: unlisted).
 
     const paste = await prisma.paste.create({
       data: {
@@ -62,7 +70,7 @@ export async function POST(req: Request) {
         title,
         content,
         expiresAt: getExpiration(expires),
-        visibility: visibility || "public",
+        visibility: visibility || "unlisted", // Guardamos como oculto por defecto
         userId,
       },
     });
