@@ -182,7 +182,6 @@ export async function PUT(
     } =
       await context.params;
 
-    // ✅ auth flexible
     const userEmail =
       session?.user
         ?.email ||
@@ -204,7 +203,6 @@ export async function PUT(
       );
     }
 
-    // ✅ buscar usuario
     const user =
       await prisma.user.findUnique(
         {
@@ -233,7 +231,6 @@ export async function PUT(
       );
     }
 
-    // ✅ buscar paste
     const existingPaste =
       await prisma.paste.findUnique(
         {
@@ -266,7 +263,6 @@ export async function PUT(
       );
     }
 
-    // ✅ validar dueño
     if (
       existingPaste.userId !==
       user.id
@@ -320,7 +316,6 @@ export async function PUT(
       );
     }
 
-    // ✅ eliminado
     if (
       existingPaste.deletedAt
     ) {
@@ -344,7 +339,6 @@ export async function PUT(
       expires,
     } = body;
 
-    // ✅ validar content
     if (
       content &&
       typeof content !==
@@ -363,7 +357,6 @@ export async function PUT(
       );
     }
 
-    // ✅ límite enorme
     if (
       content &&
       content.length >
@@ -382,7 +375,6 @@ export async function PUT(
       );
     }
 
-    // ✅ expiración
     let expiresAt =
       existingPaste.expiresAt;
 
@@ -393,7 +385,6 @@ export async function PUT(
         );
     }
 
-    // ✅ título seguro
     const safeTitle =
       (
         title ||
@@ -402,7 +393,6 @@ export async function PUT(
         .toString()
         .slice(0, 200);
 
-    // ✅ update optimizado
     const paste =
       await prisma.paste.update(
         {
@@ -482,6 +472,12 @@ export async function DELETE(
         "ownerEmail"
       );
 
+    // ✅ NUEVO
+    const permanent =
+      url.searchParams.get(
+        "permanent"
+      );
+
     const userEmail =
       session?.user
         ?.email ||
@@ -503,7 +499,6 @@ export async function DELETE(
       );
     }
 
-    // ✅ user
     const user =
       await prisma.user.findUnique(
         {
@@ -535,7 +530,6 @@ export async function DELETE(
     const { slug } =
       await context.params;
 
-    // ✅ paste
     const paste =
       await prisma.paste.findUnique(
         {
@@ -551,8 +545,7 @@ export async function DELETE(
       );
 
     if (
-      !paste ||
-      paste.deletedAt
+      !paste
     ) {
       return NextResponse.json(
         {
@@ -567,7 +560,6 @@ export async function DELETE(
       );
     }
 
-    // ✅ dueño
     if (
       paste.userId !==
       user.id
@@ -585,19 +577,37 @@ export async function DELETE(
       );
     }
 
-    // ✅ soft delete
-    await prisma.paste.update(
-      {
-        where: {
-          slug,
-        },
+    // ✅ DELETE DEFINITIVO
+    if (
+      permanent ===
+      "true"
+    ) {
 
-        data: {
-          deletedAt:
-            new Date(),
-        },
-      }
-    );
+      await prisma.paste.delete(
+        {
+          where: {
+            slug,
+          },
+        }
+      );
+
+    } else {
+
+      // ✅ papelera
+      await prisma.paste.update(
+        {
+          where: {
+            slug,
+          },
+
+          data: {
+            deletedAt:
+              new Date(),
+          },
+        }
+      );
+
+    }
 
     return NextResponse.json(
       {

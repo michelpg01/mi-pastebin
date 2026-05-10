@@ -8,7 +8,6 @@ import {
   useSession,
 } from "next-auth/react";
 
-// ✅ NUEVO
 import pako from "pako";
 
 export default function Home() {
@@ -39,7 +38,6 @@ export default function Home() {
   const [creating, setCreating] =
     useState(false);
 
-  // ✅ NUEVO
   const [uploadStatus, setUploadStatus] =
     useState("");
 
@@ -146,7 +144,6 @@ export default function Home() {
     cargarPastes();
   }, [session]);
 
-  // ✅ GZIP HELPERS
   const uint8ToBase64 = (
     u8: Uint8Array
   ) => {
@@ -170,7 +167,6 @@ export default function Home() {
     return btoa(binary);
   };
 
-  // ✅ CREATE PASTE GZIP
   const createPaste =
     async () => {
       try {
@@ -180,7 +176,6 @@ export default function Home() {
           "Preparando IPTV..."
         );
 
-        // ✅ logs
         console.log(
           "ORIGINAL SIZE:",
           content.length
@@ -192,7 +187,6 @@ export default function Home() {
             .length
         );
 
-        // ✅ comprimir
         setUploadStatus(
           "Comprimiendo..."
         );
@@ -200,7 +194,6 @@ export default function Home() {
         const compressed =
           pako.gzip(content);
 
-        // ✅ base64
         const compressedBase64 =
           uint8ToBase64(
             compressed
@@ -231,7 +224,6 @@ export default function Home() {
                 {
                   title,
 
-                  // ✅ IMPORTANTE
                   compressed:
                     true,
 
@@ -246,7 +238,6 @@ export default function Home() {
             }
           );
 
-        // ✅ debug
         if (!res.ok) {
           const text =
             await res.text();
@@ -338,7 +329,6 @@ export default function Home() {
     <main className="h-screen theme-bg px-4 sm:px-6 py-4 overflow-hidden">
       <div className="max-w-[1800px] mx-auto h-full flex flex-col">
 
-        {/* header */}
         <div className="flex flex-col lg:flex-row justify-between gap-4 mb-4 shrink-0">
 
           <h1 className="text-4xl sm:text-5xl font-bold text-blue-500">
@@ -380,10 +370,8 @@ export default function Home() {
           )}
         </div>
 
-        {/* layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 flex-1 min-h-0">
 
-          {/* izquierda */}
           <div className="flex flex-col gap-4 min-h-0">
 
             <div className="theme-card rounded-2xl p-4 flex flex-wrap gap-3 justify-between shrink-0">
@@ -465,7 +453,6 @@ export default function Home() {
                     : "Crear enlace"}
                 </button>
 
-                {/* ✅ status */}
                 {uploadStatus && (
                   <div className="text-xs opacity-70">
                     {
@@ -505,7 +492,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* derecha */}
           {session && (
             <div className="theme-card rounded-2xl p-6 flex flex-col min-h-0">
 
@@ -669,16 +655,45 @@ export default function Home() {
                           }
                         </div>
 
-                        <button
-                          onClick={() =>
-                            restorePaste(
-                              paste.slug
-                            )
-                          }
-                          className="mt-4 px-4 py-2 bg-green-600 text-white rounded-xl"
-                        >
-                          Restaurar
-                        </button>
+                        <div className="flex gap-2 mt-4 flex-wrap">
+
+                          <button
+                            onClick={() =>
+                              restorePaste(
+                                paste.slug
+                              )
+                            }
+                            className="px-4 py-2 bg-green-600 text-white rounded-xl"
+                          >
+                            Restaurar
+                          </button>
+
+                          <button
+                            onClick={async () => {
+
+                              const ok =
+                                confirm(
+                                  "¿Eliminar definitivamente?\n\nEsto NO se puede deshacer."
+                                );
+
+                              if (!ok) return;
+
+                              await fetch(
+                                `/api/paste/${paste.slug}?permanent=true`,
+                                {
+                                  method:
+                                    "DELETE",
+                                }
+                              );
+
+                              cargarPastes();
+                            }}
+                            className="px-4 py-2 bg-red-700 text-white rounded-xl"
+                          >
+                            Eliminar para siempre
+                          </button>
+
+                        </div>
 
                       </div>
                     )
