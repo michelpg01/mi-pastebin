@@ -8,34 +8,50 @@ import {
   useSession,
 } from "next-auth/react";
 
+// ✅ NUEVO
+import pako from "pako";
+
 export default function Home() {
   const { data: session } =
     useSession();
 
   const [title, setTitle] =
     useState("");
+
   const [content, setContent] =
     useState("");
+
   const [expires, setExpires] =
     useState("10m");
+
   const [visibility, setVisibility] =
     useState("public");
+
   const [misPastes, setMisPastes] =
     useState<any[]>([]);
+
   const [papelera, setPapelera] =
     useState<any[]>([]);
+
   const [tab, setTab] =
     useState("activos");
+
   const [creating, setCreating] =
     useState(false);
+
+  // ✅ NUEVO
+  const [uploadStatus, setUploadStatus] =
+    useState("");
 
   const router = useRouter();
 
   useEffect(() => {
-    document.body.style.overflow = "hidden";
+    document.body.style.overflow =
+      "hidden";
 
     return () => {
-      document.body.style.overflow = "auto";
+      document.body.style.overflow =
+        "auto";
     };
   }, []);
 
@@ -84,6 +100,7 @@ export default function Home() {
         await navigator.clipboard.writeText(
           text
         );
+
         alert(
           `${type} copiado`
         );
@@ -129,10 +146,74 @@ export default function Home() {
     cargarPastes();
   }, [session]);
 
+  // ✅ GZIP HELPERS
+  const uint8ToBase64 = (
+    u8: Uint8Array
+  ) => {
+    let binary = "";
+
+    const chunkSize = 0x8000;
+
+    for (
+      let i = 0;
+      i < u8.length;
+      i += chunkSize
+    ) {
+      binary += String.fromCharCode(
+        ...u8.subarray(
+          i,
+          i + chunkSize
+        )
+      );
+    }
+
+    return btoa(binary);
+  };
+
+  // ✅ CREATE PASTE GZIP
   const createPaste =
     async () => {
       try {
         setCreating(true);
+
+        setUploadStatus(
+          "Preparando IPTV..."
+        );
+
+        // ✅ logs
+        console.log(
+          "ORIGINAL SIZE:",
+          content.length
+        );
+
+        console.log(
+          "LINES:",
+          content.split("\n")
+            .length
+        );
+
+        // ✅ comprimir
+        setUploadStatus(
+          "Comprimiendo..."
+        );
+
+        const compressed =
+          pako.gzip(content);
+
+        // ✅ base64
+        const compressedBase64 =
+          uint8ToBase64(
+            compressed
+          );
+
+        console.log(
+          "COMPRESSED SIZE:",
+          compressedBase64.length
+        );
+
+        setUploadStatus(
+          "Subiendo..."
+        );
 
         const res =
           await fetch(
@@ -140,20 +221,46 @@ export default function Home() {
             {
               method:
                 "POST",
+
               headers: {
                 "Content-Type":
                   "application/json",
               },
+
               body: JSON.stringify(
                 {
                   title,
-                  content,
+
+                  // ✅ IMPORTANTE
+                  compressed:
+                    true,
+
+                  content:
+                    compressedBase64,
+
                   expires,
+
                   visibility,
                 }
               ),
             }
           );
+
+        // ✅ debug
+        if (!res.ok) {
+          const text =
+            await res.text();
+
+          console.error(
+            text
+          );
+
+          alert(
+            `ERROR ${res.status}`
+          );
+
+          return;
+        }
 
         const data =
           await res.json();
@@ -163,8 +270,18 @@ export default function Home() {
         router.push(
           data.url
         );
+      } catch (error) {
+        console.error(
+          error
+        );
+
+        alert(
+          "Error creando paste"
+        );
       } finally {
         setCreating(false);
+
+        setUploadStatus("");
       }
     };
 
@@ -199,10 +316,12 @@ export default function Home() {
         {
           method:
             "PUT",
+
           headers: {
             "Content-Type":
               "application/json",
           },
+
           body: JSON.stringify(
             {
               restore:
@@ -218,8 +337,10 @@ export default function Home() {
   return (
     <main className="h-screen theme-bg px-4 sm:px-6 py-4 overflow-hidden">
       <div className="max-w-[1800px] mx-auto h-full flex flex-col">
+
         {/* header */}
         <div className="flex flex-col lg:flex-row justify-between gap-4 mb-4 shrink-0">
+
           <h1 className="text-4xl sm:text-5xl font-bold text-blue-500">
             Mi Pastebin
           </h1>
@@ -237,6 +358,7 @@ export default function Home() {
             </button>
           ) : (
             <div className="flex items-center gap-4 flex-wrap">
+
               <span>
                 {
                   session
@@ -253,16 +375,21 @@ export default function Home() {
               >
                 Cerrar sesión
               </button>
+
             </div>
           )}
         </div>
 
         {/* layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 flex-1 min-h-0">
+
           {/* izquierda */}
           <div className="flex flex-col gap-4 min-h-0">
+
             <div className="theme-card rounded-2xl p-4 flex flex-wrap gap-3 justify-between shrink-0">
+
               <div className="flex gap-3 flex-wrap">
+
                 <select
                   value={expires}
                   onChange={(e) =>
@@ -275,15 +402,19 @@ export default function Home() {
                   <option value="10m">
                     10 minutos
                   </option>
+
                   <option value="1h">
                     1 hora
                   </option>
+
                   <option value="1d">
                     1 día
                   </option>
+
                   <option value="7d">
                     7 días
                   </option>
+
                   {session && (
                     <option value="never">
                       Nunca
@@ -305,9 +436,11 @@ export default function Home() {
                   <option value="public">
                     Público
                   </option>
+
                   <option value="unlisted">
                     Oculto
                   </option>
+
                   {session && (
                     <option value="private">
                       Privado
@@ -316,19 +449,31 @@ export default function Home() {
                 </select>
               </div>
 
-              <button
-                onClick={
-                  createPaste
-                }
-                disabled={
-                  creating
-                }
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold"
-              >
-                {creating
-                  ? "Creando..."
-                  : "Crear enlace"}
-              </button>
+              <div className="flex flex-col items-end gap-2">
+
+                <button
+                  onClick={
+                    createPaste
+                  }
+                  disabled={
+                    creating
+                  }
+                  className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold"
+                >
+                  {creating
+                    ? "Creando..."
+                    : "Crear enlace"}
+                </button>
+
+                {/* ✅ status */}
+                {uploadStatus && (
+                  <div className="text-xs opacity-70">
+                    {
+                      uploadStatus
+                    }
+                  </div>
+                )}
+              </div>
             </div>
 
             <input
@@ -343,6 +488,7 @@ export default function Home() {
             />
 
             <div className="flex-1 min-h-0">
+
               <textarea
                 value={
                   content
@@ -355,13 +501,16 @@ export default function Home() {
                 placeholder="Escribe aquí..."
                 className="w-full h-full min-h-0 p-4 rounded-2xl theme-input font-mono resize-none overflow-y-auto"
               />
+
             </div>
           </div>
 
           {/* derecha */}
           {session && (
             <div className="theme-card rounded-2xl p-6 flex flex-col min-h-0">
+
               <div className="flex gap-2 mb-4 shrink-0">
+
                 <button
                   onClick={() =>
                     setTab(
@@ -397,9 +546,11 @@ export default function Home() {
                   }
                   )
                 </button>
+
               </div>
 
               <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+
                 {tab ===
                   "activos" &&
                   misPastes.map(
@@ -413,6 +564,7 @@ export default function Home() {
                         }
                         className="theme-card p-4 rounded-2xl"
                       >
+
                         <div className="font-semibold text-lg">
                           {
                             paste.title
@@ -432,6 +584,7 @@ export default function Home() {
                         </div>
 
                         <div className="flex gap-2 mt-4 flex-wrap">
+
                           <button
                             onClick={() =>
                               router.push(
@@ -490,6 +643,7 @@ export default function Home() {
                           >
                             Borrar
                           </button>
+
                         </div>
                       </div>
                     )
@@ -508,6 +662,7 @@ export default function Home() {
                         }
                         className="theme-card p-4 rounded-2xl"
                       >
+
                         <div className="font-semibold">
                           {
                             paste.title
@@ -524,9 +679,11 @@ export default function Home() {
                         >
                           Restaurar
                         </button>
+
                       </div>
                     )
                   )}
+
               </div>
             </div>
           )}

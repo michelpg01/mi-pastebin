@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/prisma";
+
 import { getServerSession } from "next-auth";
+
 import { authOptions } from "@/lib/auth";
+
+// ✅ NUEVO
+import pako from "pako";
 
 // ✅ CORS
 const corsHeaders = {
@@ -88,6 +93,32 @@ function getExpiration(
   return now;
 }
 
+// ✅ base64 → Uint8Array
+function base64ToUint8(
+  base64: string
+) {
+  const binary =
+    atob(base64);
+
+  const bytes =
+    new Uint8Array(
+      binary.length
+    );
+
+  for (
+    let i = 0;
+    i < binary.length;
+    i++
+  ) {
+    bytes[i] =
+      binary.charCodeAt(
+        i
+      );
+  }
+
+  return bytes;
+}
+
 // ✅ POST
 export async function POST(
   req: Request
@@ -98,19 +129,20 @@ export async function POST(
         authOptions
       );
 
-    // ✅ parse seguro
+    // ✅ parse
     const body =
       await req.json();
 
-    const {
+    let {
       title,
       content,
       expires,
       visibility,
       ownerEmail,
+      compressed,
     } = body;
 
-    // ✅ validaciones básicas
+    // ✅ validar
     if (
       !content ||
       typeof content !==
@@ -126,8 +158,60 @@ export async function POST(
       );
     }
 
-    // ✅ límite MUY ALTO
-    // ~50MB aprox
+    // ✅ NUEVO
+    // DESCOMPRESIÓN GZIP
+    if (compressed) {
+      console.log(
+        "GZIP DETECTADO"
+      );
+
+      try {
+        const compressedBytes =
+          base64ToUint8(
+            content
+          );
+
+        content =
+          pako.ungzip(
+            compressedBytes,
+            {
+              to: "string",
+            }
+          );
+
+        console.log(
+          "DESCOMPRESIÓN OK"
+        );
+
+        console.log(
+          "FINAL SIZE:",
+          content.length
+        );
+
+        console.log(
+          "LINES:",
+          content.split(
+            "\n"
+          ).length
+        );
+      } catch (err) {
+        console.error(
+          "ERROR GZIP:",
+          err
+        );
+
+        return new Response(
+          "Error descomprimiendo contenido",
+          {
+            status: 400,
+            headers:
+              corsHeaders,
+          }
+        );
+      }
+    }
+
+    // ✅ límite real enorme
     if (
       content.length >
       50000000
@@ -142,7 +226,7 @@ export async function POST(
       );
     }
 
-    // ✅ evitar títulos gigantes
+    // ✅ título seguro
     const safeTitle =
       (
         title ||
@@ -157,7 +241,7 @@ export async function POST(
     let userId =
       null;
 
-    // ✅ enlazar usuario
+    // ✅ usuario
     if (
       session?.user
         ?.email
@@ -171,6 +255,7 @@ export async function POST(
                   .user
                   .email,
             },
+
             select: {
               id: true,
             },
@@ -190,6 +275,7 @@ export async function POST(
               email:
                 ownerEmail,
             },
+
             select: {
               id: true,
             },
@@ -201,22 +287,31 @@ export async function POST(
         null;
     }
 
-    // ✅ create optimizado
+    console.log(
+      "CREANDO PASTE..."
+    );
+
+    // ✅ guardar
     const paste =
       await prisma.paste.create(
         {
           data: {
             slug,
+
             title:
               safeTitle,
+
             content,
+
             expiresAt:
               getExpiration(
                 expires
               ),
+
             visibility:
               visibility ||
               "unlisted",
+
             userId,
           },
 
@@ -226,10 +321,15 @@ export async function POST(
         }
       );
 
-    // ✅ respuesta rápida
+    console.log(
+      "PASTE CREADO"
+    );
+
+    // ✅ respuesta
     return Response.json(
       {
         url: `/${paste.slug}`,
+
         raw: `/raw/${paste.slug}`,
       },
       {
