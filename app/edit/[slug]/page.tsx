@@ -6,10 +6,12 @@ import {
   useRef,
   useState,
 } from "react";
+
 import {
   useParams,
   useRouter,
 } from "next/navigation";
+
 import Editor from "@monaco-editor/react";
 
 type MonacoEditorType = any;
@@ -26,38 +28,86 @@ type SeriesMap = {
 export default function EditPastePage() {
   const params = useParams();
   const router = useRouter();
+
   const slug = params.slug as string;
 
   const [title, setTitle] =
     useState("");
+
   const [content, setContent] =
     useState("");
+
   const [loading, setLoading] =
     useState(true);
+
   const [saving, setSaving] =
     useState(false);
+
   const [hasChanges, setHasChanges] =
     useState(false);
+
   const [cursorLine, setCursorLine] =
     useState(1);
+
   const [cursorCol, setCursorCol] =
     useState(1);
+
   const [
     expandedSeries,
     setExpandedSeries,
   ] = useState<string | null>(null);
+
   const [editorTheme, setEditorTheme] =
     useState("vs-dark");
 
-  // ✅ NUEVO
   const [isMobile, setIsMobile] =
+    useState(false);
+
+  // ✅ NUEVO
+  const [performanceMode, setPerformanceMode] =
     useState(false);
 
   const autosaveRef =
     useRef<NodeJS.Timeout | null>(null);
+
   const editorRef =
     useRef<MonacoEditorType | null>(null);
 
+  // ✅ detectar tamaño grande
+  useEffect(() => {
+    const lines =
+      content.split("\n").length;
+
+    const huge =
+      content.length > 500000 ||
+      lines > 15000;
+
+    setPerformanceMode(huge);
+  }, [content]);
+
+  // ✅ detectar móvil
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(
+        window.innerWidth < 768
+      );
+    };
+
+    checkMobile();
+
+    window.addEventListener(
+      "resize",
+      checkMobile
+    );
+
+    return () =>
+      window.removeEventListener(
+        "resize",
+        checkMobile
+      );
+  }, []);
+
+  // ✅ evitar scroll body
   useEffect(() => {
     document.body.style.overflow =
       "hidden";
@@ -68,6 +118,7 @@ export default function EditPastePage() {
     };
   }, []);
 
+  // ✅ tema editor
   useEffect(() => {
     const updateTheme = () => {
       const isLight =
@@ -99,28 +150,7 @@ export default function EditPastePage() {
       observer.disconnect();
   }, []);
 
-  // ✅ NUEVO
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(
-        window.innerWidth < 768
-      );
-    };
-
-    checkMobile();
-
-    window.addEventListener(
-      "resize",
-      checkMobile
-    );
-
-    return () =>
-      window.removeEventListener(
-        "resize",
-        checkMobile
-      );
-  }, []);
-
+  // ✅ cargar paste
   useEffect(() => {
     async function loadPaste() {
       try {
@@ -135,6 +165,7 @@ export default function EditPastePage() {
         setTitle(
           data.title || ""
         );
+
         setContent(
           data.content || ""
         );
@@ -146,6 +177,7 @@ export default function EditPastePage() {
     loadPaste();
   }, [slug]);
 
+  // ✅ guardar
   const savePaste = async (
     silent = false
   ) => {
@@ -181,11 +213,17 @@ export default function EditPastePage() {
     }
   };
 
+  // ✅ autosave inteligente
   useEffect(() => {
     if (
       !hasChanges ||
       loading
     )
+      return;
+
+    // 🚨 desactivar autosave
+    // para listas gigantes
+    if (performanceMode)
       return;
 
     if (
@@ -215,14 +253,17 @@ export default function EditPastePage() {
     content,
     hasChanges,
     loading,
+    performanceMode,
   ]);
 
+  // ✅ copiar
   const copyContent =
     async () => {
       try {
         await navigator.clipboard.writeText(
           content
         );
+
         alert(
           "Contenido copiado"
         );
@@ -233,6 +274,7 @@ export default function EditPastePage() {
       }
     };
 
+  // ✅ ir línea
   const goToLine = (
     line: number
   ) => {
@@ -256,6 +298,7 @@ export default function EditPastePage() {
     editorRef.current.focus();
   };
 
+  // ✅ ir final
   const goToBottom =
     () => {
       const total =
@@ -266,47 +309,97 @@ export default function EditPastePage() {
       goToLine(total);
     };
 
+  // ✅ ordenar A-Z
   const sortM3U = () => {
     const lines = content.split("\n");
 
     const blocks: string[] = [];
+
     let currentBlock: string[] = [];
 
     for (const line of lines) {
-      if (line.startsWith("#EXTGRP:")) {
-        if (currentBlock.length) {
-          blocks.push(currentBlock.join("\n"));
+      if (
+        line.startsWith(
+          "#EXTGRP:"
+        )
+      ) {
+        if (
+          currentBlock.length
+        ) {
+          blocks.push(
+            currentBlock.join(
+              "\n"
+            )
+          );
         }
+
         currentBlock = [line];
       } else {
-        currentBlock.push(line);
+        currentBlock.push(
+          line
+        );
       }
     }
 
-    if (currentBlock.length) {
-      blocks.push(currentBlock.join("\n"));
+    if (
+      currentBlock.length
+    ) {
+      blocks.push(
+        currentBlock.join(
+          "\n"
+        )
+      );
     }
 
-    const sorted = blocks.sort((a, b) => {
-      const getName = (txt: string) =>
-        txt
-          .split("\n")[0]
-          .replace("#EXTGRP:", "")
-          .replace(/\(\d{4}\)/g, "")
-          .trim()
-          .toLowerCase();
+    const sorted =
+      blocks.sort(
+        (a, b) => {
+          const getName = (
+            txt: string
+          ) =>
+            txt
+              .split("\n")[0]
+              .replace(
+                "#EXTGRP:",
+                ""
+              )
+              .replace(
+                /\(\d{4}\)/g,
+                ""
+              )
+              .trim()
+              .toLowerCase();
 
-      return getName(a).localeCompare(getName(b), "es", {
-        sensitivity: "base",
-      });
-    });
+          return getName(
+            a
+          ).localeCompare(
+            getName(b),
+            "es",
+            {
+              sensitivity:
+                "base",
+            }
+          );
+        }
+      );
 
-    setContent(sorted.join("\n"));
+    setContent(
+      sorted.join("\n")
+    );
+
     setHasChanges(true);
   };
 
+  // ✅ índice optimizado
   const groupedSeries =
     useMemo<SeriesMap>(() => {
+      // 🚨 evitar freeze gigantes
+      if (
+        performanceMode
+      ) {
+        return {};
+      }
+
       const map: SeriesMap =
         {};
 
@@ -332,6 +425,7 @@ export default function EditPastePage() {
 
             let seriesName =
               fullTitle;
+
             let seasonLabel =
               "General";
 
@@ -345,6 +439,7 @@ export default function EditPastePage() {
             ) {
               seriesName =
                 seasonMatch[1].trim();
+
               seasonLabel =
                 seasonMatch[2].trim();
             }
@@ -386,7 +481,10 @@ export default function EditPastePage() {
         );
 
       return map;
-    }, [content]);
+    }, [
+      content,
+      performanceMode,
+    ]);
 
   if (loading) {
     return (
@@ -399,7 +497,10 @@ export default function EditPastePage() {
   return (
     <main className="h-screen theme-bg px-3 sm:px-5 lg:px-6 py-3 overflow-hidden">
       <div className="w-full max-w-[1900px] mx-auto h-full flex flex-col gap-3">
+
+        {/* header */}
         <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 shrink-0">
+
           <h1 className="text-3xl sm:text-4xl font-bold text-yellow-500">
             Editar Paste
           </h1>
@@ -407,7 +508,9 @@ export default function EditPastePage() {
           <div className="flex gap-2 flex-wrap">
 
             <button
-              onClick={sortM3U}
+              onClick={
+                sortM3U
+              }
               className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl font-semibold"
             >
               Ordenar A-Z
@@ -477,15 +580,28 @@ export default function EditPastePage() {
             >
               Copiar
             </button>
+
           </div>
         </div>
 
+        {/* warning rendimiento */}
+        {performanceMode && (
+          <div className="bg-orange-500/20 border border-orange-500 text-orange-300 px-4 py-3 rounded-2xl text-sm font-medium">
+            ⚡ Modo rendimiento activado:
+            lista IPTV gigante detectada.
+            Monaco y autosave fueron optimizados
+            automáticamente.
+          </div>
+        )}
+
+        {/* title */}
         <input
           value={title}
           onChange={(e) => {
             setTitle(
               e.target.value
             );
+
             setHasChanges(
               true
             );
@@ -493,28 +609,40 @@ export default function EditPastePage() {
           className="w-full p-3 rounded-2xl theme-input outline-none shrink-0"
         />
 
+        {/* layout */}
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4 flex-1 min-h-0">
+
           {/* editor */}
           <div className="theme-card rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-0">
+
             <div className="px-6 py-3 text-sm opacity-70 font-semibold shrink-0 border-b border-black/10 dark:border-white/10">
               {title || slug}
             </div>
 
             <div className="flex-1 min-h-0">
 
-              {isMobile ? (
+              {/* textarea automática */}
+              {isMobile ||
+              performanceMode ? (
                 <textarea
-                  value={content}
-                  onChange={(e) => {
+                  value={
+                    content
+                  }
+                  onChange={(
+                    e
+                  ) => {
                     setContent(
-                      e.target.value
+                      e.target
+                        .value
                     );
+
                     setHasChanges(
                       true
                     );
                   }}
                   className="
-                    w-full h-full
+                    w-full
+                    h-full
                     bg-transparent
                     p-4
                     outline-none
@@ -523,7 +651,9 @@ export default function EditPastePage() {
                     text-sm
                     overflow-auto
                   "
-                  spellCheck={false}
+                  spellCheck={
+                    false
+                  }
                 />
               ) : (
                 <Editor
@@ -542,6 +672,7 @@ export default function EditPastePage() {
                       value ||
                         ""
                     );
+
                     setHasChanges(
                       true
                     );
@@ -561,6 +692,7 @@ export default function EditPastePage() {
                             .position
                             .lineNumber
                         );
+
                         setCursorCol(
                           e
                             .position
@@ -590,7 +722,9 @@ export default function EditPastePage() {
               )}
             </div>
 
+            {/* footer */}
             <div className="px-6 py-2 text-sm opacity-70 flex justify-between shrink-0 border-t border-black/10 dark:border-white/10">
+
               <span>
                 {hasChanges
                   ? "Cambios sin guardar"
@@ -607,99 +741,108 @@ export default function EditPastePage() {
                   cursorCol
                 }
               </span>
+
             </div>
           </div>
 
           {/* sidebar */}
-          <aside className="theme-card rounded-3xl p-4 flex flex-col min-h-0">
-            <h2 className="text-lg font-bold text-blue-500 mb-4 shrink-0">
-              Índice M3U
-            </h2>
+          {!performanceMode && (
+            <aside className="theme-card rounded-3xl p-4 flex flex-col min-h-0">
 
-            <div className="space-y-3 overflow-y-auto flex-1 pr-1">
-              {Object.entries(
-                groupedSeries
-              ).map(
-                ([
-                  seriesName,
-                  seasons,
-                ]) => (
-                  <div
-                    key={
-                      seriesName
-                    }
-                    className="rounded-2xl overflow-hidden"
-                  >
-                    <button
-                      onClick={() =>
-                        setExpandedSeries(
-                          expandedSeries ===
-                            seriesName
-                            ? null
-                            : seriesName
-                        )
-                      }
-                      className="
-                        w-full text-left px-4 py-4 rounded-2xl
-                        bg-zinc-100 dark:bg-zinc-800
-                        text-zinc-900 dark:text-white
-                        font-semibold
-                        shadow-sm
-                        hover:bg-zinc-200 dark:hover:bg-zinc-700
-                        hover:shadow-lg
-                        hover:scale-[1.02]
-                        active:scale-[0.98]
-                        transition-all duration-200
-                        cursor-pointer
-                      "
-                    >
-                      {
+              <h2 className="text-lg font-bold text-blue-500 mb-4 shrink-0">
+                Índice M3U
+              </h2>
+
+              <div className="space-y-3 overflow-y-auto flex-1 pr-1">
+
+                {Object.entries(
+                  groupedSeries
+                ).map(
+                  ([
+                    seriesName,
+                    seasons,
+                  ]) => (
+                    <div
+                      key={
                         seriesName
                       }
-                    </button>
+                      className="rounded-2xl overflow-hidden"
+                    >
 
-                    {expandedSeries ===
-                      seriesName && (
-                      <div className="mt-2 space-y-2 pl-2">
-                        {seasons.map(
-                          (
-                            season,
-                            index
-                          ) => (
-                            <button
-                              key={
-                                index
-                              }
-                              onClick={() =>
-                                goToLine(
-                                  season.line
-                                )
-                              }
-                              className="
-                                w-full text-left px-4 py-3 rounded-xl
-                                bg-orange-300 dark:bg-orange-700
-                                text-zinc-800 dark:text-zinc-100
-                                text-sm font-medium
-                                hover:bg-orange-400 dark:hover:bg-orange-600
-                                hover:translate-x-1
-                                active:scale-[0.98]
-                                transition-all duration-200
-                                cursor-pointer
-                              "
-                            >
-                              {
-                                season.seasonLabel
-                              }
-                            </button>
+                      <button
+                        onClick={() =>
+                          setExpandedSeries(
+                            expandedSeries ===
+                              seriesName
+                              ? null
+                              : seriesName
                           )
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-              )}
-            </div>
-          </aside>
+                        }
+                        className="
+                          w-full text-left px-4 py-4 rounded-2xl
+                          bg-zinc-100 dark:bg-zinc-800
+                          text-zinc-900 dark:text-white
+                          font-semibold
+                          shadow-sm
+                          hover:bg-zinc-200 dark:hover:bg-zinc-700
+                          hover:shadow-lg
+                          hover:scale-[1.02]
+                          active:scale-[0.98]
+                          transition-all duration-200
+                          cursor-pointer
+                        "
+                      >
+                        {
+                          seriesName
+                        }
+                      </button>
+
+                      {expandedSeries ===
+                        seriesName && (
+                        <div className="mt-2 space-y-2 pl-2">
+
+                          {seasons.map(
+                            (
+                              season,
+                              index
+                            ) => (
+                              <button
+                                key={
+                                  index
+                                }
+                                onClick={() =>
+                                  goToLine(
+                                    season.line
+                                  )
+                                }
+                                className="
+                                  w-full text-left px-4 py-3 rounded-xl
+                                  bg-orange-300 dark:bg-orange-700
+                                  text-zinc-800 dark:text-zinc-100
+                                  text-sm font-medium
+                                  hover:bg-orange-400 dark:hover:bg-orange-600
+                                  hover:translate-x-1
+                                  active:scale-[0.98]
+                                  transition-all duration-200
+                                  cursor-pointer
+                                "
+                              >
+                                {
+                                  season.seasonLabel
+                                }
+                              </button>
+                            )
+                          )}
+
+                        </div>
+                      )}
+                    </div>
+                  )
+                )}
+
+              </div>
+            </aside>
+          )}
         </div>
       </div>
     </main>
